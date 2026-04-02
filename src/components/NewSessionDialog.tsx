@@ -10,14 +10,15 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [provider, setProvider] = useState('anthropic')
-  const [model, setModel] = useState('claude-sonnet-4-5-20250514')
+  const [model, setModel] = useState('claude-sonnet-4-6')
   const [extractionMode, setExtractionMode] = useState<'guided' | 'direct'>('guided')
+  const [folderPath, setFolderPath] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const handleProviderChange = (p: string) => {
     setProvider(p)
-    setModel(p === 'anthropic' ? 'claude-sonnet-4-5-20250514' : 'gpt-4o')
+    setModel(p === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,7 +30,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
     const res = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title.trim(), llmProvider: provider, model, extractionMode }),
+      body: JSON.stringify({ title: title.trim(), llmProvider: provider, model, extractionMode, knowledgeFolderPath: folderPath.trim() }),
     })
 
     if (!res.ok) {
@@ -57,6 +58,17 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
               placeholder="e.g. How I do code review"
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-gray-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Knowledge base folder path</label>
+            <input
+              value={folderPath}
+              onChange={e => setFolderPath(e.target.value)}
+              placeholder="/absolute/path/to/your/notes"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-gray-500 font-mono"
+            />
+            <p className="text-xs text-gray-600 mt-1">Absolute path to a folder of .md files. The folder can be empty.</p>
           </div>
 
           <div>
@@ -122,7 +134,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
             </button>
             <button
               type="submit"
-              disabled={loading || !title.trim()}
+              disabled={loading || !title.trim() || !folderPath.trim()}
               className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-sm py-2.5 rounded-lg font-medium transition"
             >
               {loading ? 'Starting...' : 'Start Session'}
