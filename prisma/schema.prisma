@@ -15,8 +15,9 @@ model ChatSession {
   title          String
   llmProvider    String    @default("anthropic")
   model          String    @default("claude-sonnet-4-6")
-  extractionMode String    @default("guided")
-  messages       Message[]
+  extractionMode      String    @default("guided")
+  knowledgeFolderPath String    @default("")
+  messages            Message[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
