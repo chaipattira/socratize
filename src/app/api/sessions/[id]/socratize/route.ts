@@ -1,4 +1,3 @@
-// src/app/api/chat/route.ts
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
@@ -7,34 +6,31 @@ import { decrypt } from '@/lib/encryption'
 import { readDoc, writeDoc } from '@/lib/local-docs'
 import { applyDocOps, type DocOp } from '@/lib/doc-ops'
 import {
-  buildSystemPrompt,
   UPDATE_DOCUMENT_TOOL,
   UPDATE_DOCUMENT_TOOL_OPENAI,
-  buildMessages,
-  type ExtractionMode,
 } from '@/lib/extraction-prompt'
+import {
+  buildSocratizeSystemPrompt,
+  buildSocratizeMessages,
+  type SocratizeMessage,
+} from '@/lib/socratize-prompt'
 
-export async function POST(request: Request) {
-  const { sessionId, message } = await request.json()
-  if (!sessionId || !message?.trim()) {
-    return NextResponse.json({ error: 'sessionId and message are required' }, { status: 400 })
-  }
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: sessionId } = await params
+  // followUps: previous socratize-mode messages (assistant questions + user answers)
+  const { followUps = [] } = await request.json()
 
-  // Load session, history, and API keys
-  const [session, messages, allKeys] = await Promise.all([
+  const [session, allKeys] = await Promise.all([
     prisma.chatSession.findUnique({ where: { id: sessionId } }),
-    prisma.message.findMany({
-      where: { chatSessionId: sessionId },
-      orderBy: { createdAt: 'asc' },
-    }),
     prisma.apiKey.findMany(),
   ])
 
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
 
-  // Prefer the key matching the session's provider
   const apiKeyRecord = allKeys.find(k => k.provider === session.llmProvider) ?? allKeys[0]
-
   if (!apiKeyRecord) {
     return NextResponse.json(
       { error: 'No API key found. Add one in Settings.' },
@@ -42,12 +38,9 @@ export async function POST(request: Request) {
     )
   }
 
-  const currentMarkdown = readDoc(sessionId)
-  const systemPrompt = buildSystemPrompt(
-    currentMarkdown,
-    (session.extractionMode as ExtractionMode) ?? 'guided'
-  )
-  const conversationMessages = buildMessages(messages, message.trim())
+  const extractedMarkdown = readDoc(sessionId)
+  const systemPrompt = buildSocratizeSystemPrompt()
+  const messages = buildSocratizeMessages(extractedMarkdown, followUps as SocratizeMessage[])
 
   const encoder = new TextEncoder()
   let fullAssistantText = ''
@@ -60,14 +53,15 @@ export async function POST(request: Request) {
 
       try {
         const decryptedKey = decrypt(apiKeyRecord.encryptedKey)
+
         if (apiKeyRecord.provider === 'anthropic') {
           const anthropic = new Anthropic({ apiKey: decryptedKey })
           const anthropicStream = anthropic.messages.stream({
             model: session.model,
-            max_tokens: 2048,
+            max_tokens: 4096,
             system: systemPrompt,
             tools: [UPDATE_DOCUMENT_TOOL as any],
-            messages: conversationMessages,
+            messages,
           })
 
           let toolInputBuffer = ''
@@ -103,7 +97,7 @@ export async function POST(request: Request) {
             tools: [UPDATE_DOCUMENT_TOOL_OPENAI],
             messages: [
               { role: 'system', content: systemPrompt },
-              ...conversationMessages,
+              ...messages,
             ],
           })
 
@@ -127,32 +121,16 @@ export async function POST(request: Request) {
           }
         }
 
-        // Apply doc ops and save to disk + DB
-        const newMarkdown = applyDocOps(currentMarkdown, extractedOps)
-        writeDoc(sessionId, newMarkdown)
+        // If Claude wrote doc ops, save the updated document
+        if (extractedOps.length > 0) {
+          const currentMarkdown = readDoc(sessionId)
+          const newMarkdown = applyDocOps(currentMarkdown, extractedOps)
+          writeDoc(sessionId, newMarkdown)
+        }
 
-        await Promise.all([
-          prisma.message.create({
-            data: { chatSessionId: sessionId, role: 'user', content: message.trim() },
-          }),
-          prisma.message.create({
-            data: {
-              chatSessionId: sessionId,
-              role: 'assistant',
-              content: fullAssistantText,
-              docOps: extractedOps.length ? JSON.stringify(extractedOps) : null,
-            },
-          }),
-          prisma.chatSession.update({
-            where: { id: sessionId },
-            data: { updatedAt: new Date() },
-          }),
-        ])
-
-        send({ type: 'done' })
+        send({ type: 'done', hasDocOps: extractedOps.length > 0 })
       } catch (err) {
-        console.error('[chat] Error:', err)
-        // Never expose raw error strings — SDK auth errors may contain the API key
+        console.error('[socratize] Error:', err)
         const is401 = err instanceof Error && (err as any).status === 401
         send({
           type: 'error',
