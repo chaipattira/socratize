@@ -1,5 +1,4 @@
 // Embedded skill spec — key requirements from the writing-skills standard.
-// Source: https://github.com/obra/superpowers-developing-for-claude-code
 const SKILL_SPEC = `
 ## What Makes a Good SKILL.md
 
