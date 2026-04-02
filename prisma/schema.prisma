@@ -67,6 +67,8 @@ model ChatSession {
   messages        Message[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
 }
 
 model Message {
@@ -77,14 +79,17 @@ model Message {
   docOps        String?     // JSON string of DocOp[]
   chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
   createdAt     DateTime    @default(now())
+
+  @@index([chatSessionId])
 }
 
 model ApiKey {
-  id           String  @id @default(cuid())
+  id           String   @id @default(cuid())
   userId       String
-  provider     String  // "anthropic" | "openai"
+  provider     String   // "anthropic" | "openai"
   encryptedKey String
-  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
 }
