@@ -153,7 +153,14 @@ export async function POST(request: Request) {
 
         send({ type: 'done' })
       } catch (err) {
-        send({ type: 'error', message: String(err) })
+        // Never expose raw error strings — SDK auth errors may contain the API key
+        const is401 = err instanceof Error && (err as any).status === 401
+        send({
+          type: 'error',
+          message: is401
+            ? 'Invalid API key. Check your key in Settings.'
+            : 'An error occurred. Please try again.',
+        })
       } finally {
         controller.close()
       }

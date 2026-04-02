@@ -3,6 +3,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Note: Prisma v7 moves the database URL out of schema.prisma.
+// The URL is configured in prisma.config.ts via defineConfig({ datasource: { url } }).
+// Adding url = env("DATABASE_URL") here would conflict with prisma.config.ts (error P1012).
 datasource db {
   provider = "sqlite"
 }

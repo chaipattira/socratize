@@ -32,7 +32,8 @@ function applyDocOp(markdown: string, op: DocOp): string {
     const bounds = getSectionBounds(lines, op.section)
     if (!bounds) {
       // Section doesn't exist — append it at the end
-      return markdown.trimEnd() + `\n\n${op.section}\n\n${op.content}`
+      const base = markdown.trimEnd()
+      return (base ? base + '\n\n' : '') + `${op.section}\n\n${op.content}`
     }
     // Insert content before the next section (or end)
     const insertAt = bounds.contentEnd
@@ -44,7 +45,7 @@ function applyDocOp(markdown: string, op: DocOp): string {
     const bounds = getSectionBounds(lines, op.section)
     if (!bounds) return markdown
     const sectionLines = lines.slice(bounds.contentStart, bounds.contentEnd)
-    const sectionText = sectionLines.join('\n').replace(op.find, op.replace)
+    const sectionText = sectionLines.join('\n').replaceAll(op.find, op.replace)
     const newLines = [
       ...lines.slice(0, bounds.contentStart),
       ...sectionText.split('\n'),

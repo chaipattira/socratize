@@ -45,16 +45,20 @@ export function useChat({ sessionId, initialMessages = [], onDocOps }: UseChatOp
 
         const reader = response.body!.getReader()
         const decoder = new TextDecoder()
+        let buffer = ''
 
         while (true) {
           const { value, done } = await reader.read()
           if (done) break
 
-          const text = decoder.decode(value)
-          const lines = text.split('\n\n').filter(l => l.startsWith('data: '))
+          buffer += decoder.decode(value, { stream: true })
+          // Process all complete SSE frames (each ends with \n\n)
+          const frames = buffer.split('\n\n')
+          buffer = frames.pop() ?? ''
 
-          for (const line of lines) {
-            const event = JSON.parse(line.slice(6))
+          for (const frame of frames) {
+            if (!frame.startsWith('data: ')) continue
+            const event = JSON.parse(frame.slice(6))
 
             if (event.type === 'text') {
               assistantText += event.delta
