@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildSystemPrompt,
   UPDATE_DOCUMENT_TOOL,
+  UPDATE_DOCUMENT_TOOL_OPENAI,
   buildMessages,
 } from '@/lib/extraction-prompt'
 
@@ -33,6 +34,14 @@ describe('UPDATE_DOCUMENT_TOOL', () => {
   })
 })
 
+describe('UPDATE_DOCUMENT_TOOL_OPENAI', () => {
+  it('has OpenAI function tool format', () => {
+    expect(UPDATE_DOCUMENT_TOOL_OPENAI.type).toBe('function')
+    expect(UPDATE_DOCUMENT_TOOL_OPENAI.function.name).toBe('update_document')
+    expect(UPDATE_DOCUMENT_TOOL_OPENAI.function.parameters).toBeDefined()
+  })
+})
+
 describe('buildMessages', () => {
   it('converts stored messages to Anthropic format', () => {
     const stored = [
@@ -49,5 +58,16 @@ describe('buildMessages', () => {
     const messages = buildMessages([], 'New question')
     expect(messages).toHaveLength(1)
     expect(messages[0]).toEqual({ role: 'user', content: 'New question' })
+  })
+
+  it('filters out non-user/assistant roles', () => {
+    const stored = [
+      { role: 'system', content: 'sys prompt' },
+      { role: 'user', content: 'Hello' },
+      { role: 'assistant', content: 'Hi' },
+    ]
+    const messages = buildMessages(stored)
+    expect(messages).toHaveLength(2)
+    expect(messages.every(m => m.role === 'user' || m.role === 'assistant')).toBe(true)
   })
 })
