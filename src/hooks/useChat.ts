@@ -1,23 +1,34 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { type DocOp } from '@/lib/doc-ops'
 
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
+  isSocratize?: boolean
 }
 
 interface UseChatOptions {
   sessionId: string
   initialMessages?: ChatMessage[]
   onDocOps: (ops: DocOp[]) => void
+  isSocratizing: boolean
+  onSocratizeDone: () => void
 }
 
-export function useChat({ sessionId, initialMessages = [], onDocOps }: UseChatOptions) {
+export function useChat({
+  sessionId,
+  initialMessages = [],
+  onDocOps,
+  isSocratizing,
+  onSocratizeDone,
+}: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [streamingText, setStreamingText] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Tracks socratize follow-up messages (assistant questions + user answers)
+  const socratizeFollowUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -25,18 +36,36 @@ export function useChat({ sessionId, initialMessages = [], onDocOps }: UseChatOp
       setError(null)
       setIsStreaming(true)
 
-      const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content }
+      const userMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content,
+        isSocratize: isSocratizing,
+      }
       setMessages(prev => [...prev, userMsg])
 
       let assistantText = ''
       setStreamingText('')
 
       try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, message: content }),
-        })
+        let response: Response
+
+        if (isSocratizing) {
+          // Add the user's answer to the follow-ups before sending
+          socratizeFollowUps.current.push({ role: 'user', content })
+
+          response = await fetch(`/api/sessions/${sessionId}/socratize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ followUps: socratizeFollowUps.current }),
+          })
+        } else {
+          response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, message: content }),
+          })
+        }
 
         if (!response.ok) {
           const err = await response.json()
@@ -46,13 +75,13 @@ export function useChat({ sessionId, initialMessages = [], onDocOps }: UseChatOp
         const reader = response.body!.getReader()
         const decoder = new TextDecoder()
         let buffer = ''
+        let gotDocOps = false
 
         while (true) {
           const { value, done } = await reader.read()
           if (done) break
 
           buffer += decoder.decode(value, { stream: true })
-          // Process all complete SSE frames (each ends with \n\n)
           const frames = buffer.split('\n\n')
           buffer = frames.pop() ?? ''
 
@@ -65,26 +94,48 @@ export function useChat({ sessionId, initialMessages = [], onDocOps }: UseChatOp
               setStreamingText(assistantText)
             } else if (event.type === 'doc_ops') {
               onDocOps(event.ops)
+              gotDocOps = true
             } else if (event.type === 'error') {
               throw new Error(event.message)
             } else if (event.type === 'done') {
-              setMessages(prev => [
-                ...prev,
-                { id: crypto.randomUUID(), role: 'assistant', content: assistantText },
-              ])
+              const assistantMsg: ChatMessage = {
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                content: assistantText,
+                isSocratize: isSocratizing,
+              }
+              setMessages(prev => [...prev, assistantMsg])
               setStreamingText('')
+
+              if (isSocratizing) {
+                // Track assistant's reply in follow-ups
+                socratizeFollowUps.current.push({ role: 'assistant', content: assistantText })
+                // If Claude wrote doc ops, the SKILL.md is done — exit socratize mode
+                if (gotDocOps) {
+                  socratizeFollowUps.current = []
+                  onSocratizeDone()
+                }
+              }
             }
           }
         }
       } catch (err) {
         setError(String(err))
-        setMessages(prev => prev.slice(0, -1)) // Remove optimistic user message
+        setMessages(prev => prev.slice(0, -1))
+        if (isSocratizing) {
+          // Roll back the follow-up we just added
+          socratizeFollowUps.current = socratizeFollowUps.current.slice(0, -1)
+        }
       } finally {
         setIsStreaming(false)
       }
     },
-    [sessionId, isStreaming, onDocOps]
+    [sessionId, isStreaming, onDocOps, isSocratizing, onSocratizeDone]
   )
 
-  return { messages, streamingText, isStreaming, error, sendMessage }
+  const startSocratize = useCallback(() => {
+    socratizeFollowUps.current = []
+  }, [])
+
+  return { messages, streamingText, isStreaming, error, sendMessage, startSocratize }
 }
