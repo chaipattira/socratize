@@ -162,6 +162,7 @@ async function runOpenAIKbLoop(
       const toolResults: OAIMessage[] = []
 
       for (const toolCall of message.tool_calls) {
+        if (toolCall.type !== 'function') continue
         const name = toolCall.function.name
         const input = JSON.parse(toolCall.function.arguments) as Record<string, unknown>
         const result = executeKbTool(name, input, folderPath)
