@@ -9,6 +9,7 @@ export async function GET() {
       title: true,
       llmProvider: true,
       model: true,
+      extractionMode: true,
       createdAt: true,
       updatedAt: true,
       _count: { select: { messages: true } },
@@ -18,15 +19,23 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { title, llmProvider = 'anthropic', model = 'claude-sonnet-4-6' } =
-    await request.json()
+  const {
+    title,
+    llmProvider = 'anthropic',
+    model = 'claude-sonnet-4-6',
+    extractionMode = 'guided',
+  } = await request.json()
 
   if (!title?.trim()) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
   }
 
+  if (extractionMode !== 'guided' && extractionMode !== 'direct') {
+    return NextResponse.json({ error: 'extractionMode must be "guided" or "direct"' }, { status: 400 })
+  }
+
   const session = await prisma.chatSession.create({
-    data: { title: title.trim(), llmProvider, model },
+    data: { title: title.trim(), llmProvider, model, extractionMode },
   })
   return NextResponse.json(session, { status: 201 })
 }
