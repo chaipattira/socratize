@@ -33,7 +33,7 @@ export function SessionView({
     setIsSocratizing(false)
   }, [])
 
-  const { messages, streamingText, isStreaming, error, sendMessage, startSocratize } = useChat({
+  const { messages, streamingText, isStreaming, error, sendMessage, startSocratize, triggerSocratize } = useChat({
     sessionId,
     initialMessages,
     onDocOps: handleDocOps,
@@ -60,9 +60,8 @@ export function SessionView({
   const handleSocratize = useCallback(() => {
     startSocratize()
     setIsSocratizing(true)
-    // Trigger the first socratize call with no follow-ups — Claude reviews the doc and responds
-    sendMessage('\u200B') // zero-width space as trigger; the socratize endpoint ignores user message content
-  }, [startSocratize, sendMessage])
+    triggerSocratize()
+  }, [startSocratize, triggerSocratize])
 
   const filename =
     title

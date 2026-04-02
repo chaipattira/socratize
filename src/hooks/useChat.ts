@@ -137,5 +137,76 @@ export function useChat({
     socratizeFollowUps.current = []
   }, [])
 
-  return { messages, streamingText, isStreaming, error, sendMessage, startSocratize }
+  const triggerSocratize = useCallback(async () => {
+    if (isStreaming) return
+    setError(null)
+    setIsStreaming(true)
+    socratizeFollowUps.current = []
+
+    let assistantText = ''
+    setStreamingText('')
+
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/socratize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followUps: [] }),
+      })
+
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error ?? 'Failed to start Socratize')
+      }
+
+      const reader = response.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let gotDocOps = false
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const frames = buffer.split('\n\n')
+        buffer = frames.pop() ?? ''
+
+        for (const frame of frames) {
+          if (!frame.startsWith('data: ')) continue
+          const event = JSON.parse(frame.slice(6))
+
+          if (event.type === 'text') {
+            assistantText += event.delta
+            setStreamingText(assistantText)
+          } else if (event.type === 'doc_ops') {
+            onDocOps(event.ops)
+            gotDocOps = true
+          } else if (event.type === 'error') {
+            throw new Error(event.message)
+          } else if (event.type === 'done') {
+            const assistantMsg: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: assistantText,
+              isSocratize: true,
+            }
+            setMessages(prev => [...prev, assistantMsg])
+            setStreamingText('')
+            socratizeFollowUps.current.push({ role: 'assistant', content: assistantText })
+
+            if (gotDocOps) {
+              socratizeFollowUps.current = []
+              onSocratizeDone()
+            }
+          }
+        }
+      }
+    } catch (err) {
+      setError(String(err))
+    } finally {
+      setIsStreaming(false)
+    }
+  }, [sessionId, isStreaming, onDocOps, onSocratizeDone])
+
+  return { messages, streamingText, isStreaming, error, sendMessage, startSocratize, triggerSocratize }
 }
