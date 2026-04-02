@@ -9,6 +9,7 @@ import { applyDocOps, type DocOp } from '@/lib/doc-ops'
 interface SessionViewProps {
   sessionId: string
   title: string
+  extractionMode: 'guided' | 'direct'
   initialMessages: ChatMessage[]
   initialMarkdown: string
 }
@@ -16,20 +17,28 @@ interface SessionViewProps {
 export function SessionView({
   sessionId,
   title,
+  extractionMode,
   initialMessages,
   initialMarkdown,
 }: SessionViewProps) {
   const router = useRouter()
   const [markdown, setMarkdown] = useState(initialMarkdown)
+  const [isSocratizing, setIsSocratizing] = useState(false)
 
   const handleDocOps = useCallback((ops: DocOp[]) => {
     setMarkdown(prev => applyDocOps(prev, ops))
   }, [])
 
-  const { messages, streamingText, isStreaming, error, sendMessage } = useChat({
+  const handleSocratizeDone = useCallback(() => {
+    setIsSocratizing(false)
+  }, [])
+
+  const { messages, streamingText, isStreaming, error, sendMessage, startSocratize } = useChat({
     sessionId,
     initialMessages,
     onDocOps: handleDocOps,
+    isSocratizing,
+    onSocratizeDone: handleSocratizeDone,
   })
 
   const handleMarkdownChange = useCallback(
@@ -47,6 +56,13 @@ export function SessionView({
   const handleDownload = useCallback(() => {
     window.location.href = `/api/sessions/${sessionId}/export`
   }, [sessionId])
+
+  const handleSocratize = useCallback(() => {
+    startSocratize()
+    setIsSocratizing(true)
+    // Trigger the first socratize call with no follow-ups — Claude reviews the doc and responds
+    sendMessage('\u200B') // zero-width space as trigger; the socratize endpoint ignores user message content
+  }, [startSocratize, sendMessage])
 
   const filename =
     title
@@ -67,7 +83,16 @@ export function SessionView({
           </button>
           <span className="text-sm text-gray-400">{title}</span>
         </div>
-        <span className="text-lg font-bold text-red-500">Socratize</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSocratize}
+            disabled={isStreaming || isSocratizing || !markdown.trim()}
+            className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm px-4 py-1.5 rounded-lg font-medium transition"
+          >
+            Socratize!
+          </button>
+          <span className="text-lg font-bold text-red-500">Socratize</span>
+        </div>
       </div>
 
       {/* Split pane */}
@@ -78,6 +103,7 @@ export function SessionView({
             streamingText={streamingText}
             isStreaming={isStreaming}
             error={error}
+            isSocratizing={isSocratizing}
             onSend={sendMessage}
           />
         </div>
