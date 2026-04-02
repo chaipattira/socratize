@@ -1,3 +1,0 @@
-
-
-# Gravitational Wave Processing
