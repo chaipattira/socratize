@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import fs from 'fs'
 
 export async function GET() {
   const sessions = await prisma.chatSession.findMany({
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
     llmProvider = 'anthropic',
     model = 'claude-sonnet-4-6',
     extractionMode = 'guided',
+    knowledgeFolderPath = '',
   } = await request.json()
 
   if (!title?.trim()) {
@@ -34,8 +36,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'extractionMode must be "guided" or "direct"' }, { status: 400 })
   }
 
+  const folderPath = knowledgeFolderPath?.trim() ?? ''
+
+  if (!folderPath) {
+    return NextResponse.json({ error: 'knowledgeFolderPath is required' }, { status: 400 })
+  }
+
+  if (!fs.existsSync(folderPath) || !fs.statSync(folderPath).isDirectory()) {
+    return NextResponse.json(
+      { error: 'knowledgeFolderPath must be an existing directory' },
+      { status: 400 }
+    )
+  }
+
   const session = await prisma.chatSession.create({
-    data: { title: title.trim(), llmProvider, model, extractionMode },
+    data: { title: title.trim(), llmProvider, model, extractionMode, knowledgeFolderPath: folderPath },
   })
   return NextResponse.json(session, { status: 201 })
 }
