@@ -11,6 +11,7 @@ import {
   UPDATE_DOCUMENT_TOOL,
   UPDATE_DOCUMENT_TOOL_OPENAI,
   buildMessages,
+  type ExtractionMode,
 } from '@/lib/extraction-prompt'
 
 export async function POST(request: Request) {
@@ -42,7 +43,10 @@ export async function POST(request: Request) {
   }
 
   const currentMarkdown = readDoc(sessionId)
-  const systemPrompt = buildSystemPrompt(currentMarkdown)
+  const systemPrompt = buildSystemPrompt(
+    currentMarkdown,
+    (session.extractionMode as ExtractionMode) ?? 'guided'
+  )
   const conversationMessages = buildMessages(messages, message.trim())
 
   const encoder = new TextEncoder()
