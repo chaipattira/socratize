@@ -11,13 +11,14 @@ datasource db {
 }
 
 model ChatSession {
-  id          String    @id @default(cuid())
-  title       String
-  llmProvider String    @default("anthropic")
-  model       String    @default("claude-sonnet-4-6")
-  messages    Message[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  title          String
+  llmProvider    String    @default("anthropic")
+  model          String    @default("claude-sonnet-4-6")
+  extractionMode String    @default("guided")
+  messages       Message[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Message {
