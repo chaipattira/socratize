@@ -24,6 +24,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     <SessionView
       sessionId={chatSession.id}
       title={chatSession.title}
+      extractionMode={(chatSession.extractionMode as 'guided' | 'direct') ?? 'guided'}
       initialMessages={initialMessages}
       initialMarkdown={readDoc(chatSession.id)}
     />
