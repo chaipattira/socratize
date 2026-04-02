@@ -11,6 +11,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
   const [title, setTitle] = useState('')
   const [provider, setProvider] = useState('anthropic')
   const [model, setModel] = useState('claude-sonnet-4-5-20250514')
+  const [extractionMode, setExtractionMode] = useState<'guided' | 'direct'>('guided')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -28,7 +29,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
     const res = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title.trim(), llmProvider: provider, model }),
+      body: JSON.stringify({ title: title.trim(), llmProvider: provider, model, extractionMode }),
     })
 
     if (!res.ok) {
@@ -53,9 +54,39 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
               autoFocus
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Confounding in Epidemiology"
+              placeholder="e.g. How I do code review"
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-gray-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">How do you want to start?</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setExtractionMode('guided')}
+                className={`px-3 py-3 rounded-lg text-sm text-left border transition ${
+                  extractionMode === 'guided'
+                    ? 'bg-red-600/20 border-red-500 text-red-300'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                <div className="font-medium mb-0.5">Help me discover it</div>
+                <div className="text-xs opacity-70">I'll be asked questions to surface what I know</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setExtractionMode('direct')}
+                className={`px-3 py-3 rounded-lg text-sm text-left border transition ${
+                  extractionMode === 'direct'
+                    ? 'bg-red-600/20 border-red-500 text-red-300'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                <div className="font-medium mb-0.5">I know what to include</div>
+                <div className="text-xs opacity-70">I'll walk through the steps myself</div>
+              </button>
+            </div>
           </div>
 
           <div>
