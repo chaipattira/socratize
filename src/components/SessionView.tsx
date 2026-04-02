@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatPane } from './ChatPane'
 import { EditorPane } from './EditorPane'
@@ -12,6 +12,8 @@ interface SessionViewProps {
   extractionMode: 'guided' | 'direct'
   initialMessages: ChatMessage[]
   initialMarkdown: string
+  knowledgeFolderPath: string
+  initialFiles: string[]
 }
 
 export function SessionView({
@@ -20,10 +22,18 @@ export function SessionView({
   extractionMode,
   initialMessages,
   initialMarkdown,
+  knowledgeFolderPath,
+  initialFiles,
 }: SessionViewProps) {
   const router = useRouter()
+  const isKbSession = !!knowledgeFolderPath
+
   const [markdown, setMarkdown] = useState(initialMarkdown)
   const [isSocratizing, setIsSocratizing] = useState(false)
+
+  // KB state
+  const [files, setFiles] = useState<string[]>(initialFiles)
+  const [activeFile, setActiveFile] = useState<{ filename: string; content: string } | null>(null)
 
   const handleDocOps = useCallback((ops: DocOp[]) => {
     setMarkdown(prev => applyDocOps(prev, ops))
@@ -33,13 +43,33 @@ export function SessionView({
     setIsSocratizing(false)
   }, [])
 
-  const { messages, streamingText, isStreaming, error, sendMessage, startSocratize, triggerSocratize } = useChat({
+  const handleFileUpdate = useCallback(({ filename, content }: { filename: string; content: string }) => {
+    setActiveFile({ filename, content })
+    setFiles(prev => prev.includes(filename) ? prev : [...prev, filename].sort())
+  }, [])
+
+  const handleFileClick = useCallback(async (filename: string) => {
+    const res = await fetch(`/api/sessions/${sessionId}/file?filename=${encodeURIComponent(filename)}`)
+    if (!res.ok) return
+    const { content } = await res.json()
+    setActiveFile({ filename, content })
+  }, [sessionId])
+
+  const { messages, streamingText, isStreaming, error, sendMessage, startSocratize, triggerSocratize, triggerKbSession } = useChat({
     sessionId,
     initialMessages,
     onDocOps: handleDocOps,
+    onFileUpdate: handleFileUpdate,
     isSocratizing,
     onSocratizeDone: handleSocratizeDone,
   })
+
+  useEffect(() => {
+    if (isKbSession && initialMessages.length === 0) {
+      triggerKbSession()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // intentionally runs once on mount
 
   const handleMarkdownChange = useCallback(
     async (value: string) => {
@@ -83,13 +113,15 @@ export function SessionView({
           <span className="text-sm text-gray-400">{title}</span>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleSocratize}
-            disabled={isStreaming || isSocratizing || !markdown.trim()}
-            className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm px-4 py-1.5 rounded-lg font-medium transition"
-          >
-            Socratize!
-          </button>
+          {!isKbSession && (
+            <button
+              onClick={handleSocratize}
+              disabled={isStreaming || isSocratizing || !markdown.trim()}
+              className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm px-4 py-1.5 rounded-lg font-medium transition"
+            >
+              Socratize!
+            </button>
+          )}
           <span className="text-lg font-bold text-red-500">Socratize</span>
         </div>
       </div>
@@ -108,10 +140,24 @@ export function SessionView({
         </div>
         <div className="flex-1 min-h-0">
           <EditorPane
-            filename={filename}
-            content={markdown}
-            onChange={handleMarkdownChange}
+            filename={isKbSession ? (activeFile?.filename ?? '') : filename}
+            content={isKbSession ? (activeFile?.content ?? '') : markdown}
+            onChange={isKbSession
+              ? async (value: string) => {
+                  if (!activeFile) return
+                  setActiveFile(prev => prev ? { ...prev, content: value } : null)
+                  await fetch(`/api/sessions/${sessionId}/file`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: activeFile.filename, content: value }),
+                  })
+                }
+              : handleMarkdownChange
+            }
             onDownload={handleDownload}
+            files={isKbSession ? files : undefined}
+            onFileClick={isKbSession ? handleFileClick : undefined}
+            activeFilename={isKbSession ? activeFile?.filename : undefined}
           />
         </div>
       </div>
