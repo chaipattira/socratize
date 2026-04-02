@@ -7,10 +7,18 @@ interface ChatPaneProps {
   streamingText: string
   isStreaming: boolean
   error: string | null
+  isSocratizing: boolean
   onSend: (message: string) => void
 }
 
-export function ChatPane({ messages, streamingText, isStreaming, error, onSend }: ChatPaneProps) {
+export function ChatPane({
+  messages,
+  streamingText,
+  isStreaming,
+  error,
+  isSocratizing,
+  onSend,
+}: ChatPaneProps) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -27,8 +35,15 @@ export function ChatPane({ messages, streamingText, isStreaming, error, onSend }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-2 bg-gray-900 border-b border-gray-800 text-xs text-gray-500">
-        Conversation
+      <div className="px-4 py-2 bg-gray-900 border-b border-gray-800 text-xs text-gray-500 flex items-center gap-2">
+        {isSocratizing ? (
+          <>
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-red-400 font-medium">Socratize mode</span>
+          </>
+        ) : (
+          'Conversation'
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -39,7 +54,11 @@ export function ChatPane({ messages, streamingText, isStreaming, error, onSend }
           >
             <div
               className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                msg.role === 'assistant' ? 'bg-red-600' : 'bg-blue-700'
+                msg.role === 'assistant'
+                  ? msg.isSocratize
+                    ? 'bg-orange-600'
+                    : 'bg-red-600'
+                  : 'bg-blue-700'
               }`}
             >
               {msg.role === 'assistant' ? 'S' : 'P'}
@@ -58,7 +77,11 @@ export function ChatPane({ messages, streamingText, isStreaming, error, onSend }
 
         {streamingText && (
           <div className="flex gap-3">
-            <div className="w-7 h-7 rounded-full bg-red-600 flex items-center justify-center text-xs font-bold shrink-0">
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                isSocratizing ? 'bg-orange-600' : 'bg-red-600'
+              }`}
+            >
               S
             </div>
             <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-tl-sm bg-gray-800 text-sm leading-relaxed">
@@ -83,7 +106,13 @@ export function ChatPane({ messages, streamingText, isStreaming, error, onSend }
             value={input}
             onChange={e => setInput(e.target.value)}
             disabled={isStreaming}
-            placeholder={isStreaming ? 'Waiting for response...' : 'Share your expertise...'}
+            placeholder={
+              isStreaming
+                ? 'Waiting for response...'
+                : isSocratizing
+                ? 'Answer the question above...'
+                : 'Share your expertise...'
+            }
             className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:border-gray-500 disabled:opacity-50"
           />
           <button
