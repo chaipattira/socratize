@@ -6,23 +6,47 @@ import {
   buildMessages,
 } from '@/lib/extraction-prompt'
 
-describe('buildSystemPrompt', () => {
+describe('buildSystemPrompt guided mode', () => {
   it('includes the current document state', () => {
-    const prompt = buildSystemPrompt('## Core Concepts\n\nFoo.')
-    expect(prompt).toContain('## Core Concepts')
+    const prompt = buildSystemPrompt('## When to Use\n\nFoo.', 'guided')
+    expect(prompt).toContain('## When to Use')
     expect(prompt).toContain('Foo.')
   })
 
-  it('includes extraction phase instructions', () => {
-    const prompt = buildSystemPrompt('')
-    expect(prompt).toContain('Scope & Context')
-    expect(prompt).toContain('Core Concepts')
-    expect(prompt).toContain('Misconceptions')
+  it('uses empty document placeholder when document is empty', () => {
+    const prompt = buildSystemPrompt('', 'guided')
+    expect(prompt).toContain('(empty)')
+  })
+
+  it('includes skill-shaped extraction phases', () => {
+    const prompt = buildSystemPrompt('', 'guided')
+    expect(prompt).toContain('Triggers')
+    expect(prompt).toContain('Failure Modes')
+    expect(prompt).toContain('Edge Cases')
+  })
+
+  it('opens with the tacit-knowledge question', () => {
+    const prompt = buildSystemPrompt('', 'guided')
+    expect(prompt).toContain('other people on your team')
+  })
+})
+
+describe('buildSystemPrompt direct mode', () => {
+  it('includes the current document state', () => {
+    const prompt = buildSystemPrompt('## Process\n\nBar.', 'direct')
+    expect(prompt).toContain('## Process')
+    expect(prompt).toContain('Bar.')
   })
 
   it('uses empty document placeholder when document is empty', () => {
-    const prompt = buildSystemPrompt('')
+    const prompt = buildSystemPrompt('', 'direct')
     expect(prompt).toContain('(empty)')
+  })
+
+  it('opens with structured intake', () => {
+    const prompt = buildSystemPrompt('', 'direct')
+    expect(prompt).toContain('name of this')
+    expect(prompt).toContain('step')
   })
 })
 
