@@ -4,13 +4,12 @@ A webapp that interviews domain experts using Socratic dialogue to extract their
 
 ## How It Works
 
-1. Sign in with Google
-2. Add your Anthropic or OpenAI API key in Settings
-3. Create a new session and enter a topic ("Confounding in Epidemiology")
-4. Chat with the AI — it asks probing questions to draw out your knowledge
-5. Watch the markdown document form in real-time on the right pane
-6. Edit the document directly if you want to tweak anything
-7. Download the finished `.md` file
+1. Add your Anthropic or OpenAI API key in Settings
+2. Create a new session and enter a topic ("Confounding in Epidemiology")
+3. Chat with the AI — it asks probing questions to draw out your knowledge
+4. Watch the markdown document form in real-time on the right pane
+5. Edit the document directly if you want to tweak anything
+6. Download the finished `.md` file
 
 ## Local Setup
 
@@ -33,15 +32,6 @@ cp .env.local.example .env.local
 `.env.local` needs:
 
 ```
-# Google OAuth — create at https://console.cloud.google.com/
-# Authorized redirect URIs: http://localhost:3000/api/auth/callback/google
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-
-# NextAuth
-NEXTAUTH_SECRET=      # generate with: openssl rand -base64 32
-NEXTAUTH_URL=http://localhost:3000
-
 # Encryption key for stored API keys (64 hex chars = 32 bytes)
 # generate with: openssl rand -hex 32
 ENCRYPTION_KEY=
@@ -66,13 +56,17 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Adding an API Key
 
-After signing in, go to **Settings** and add your Anthropic (`sk-ant-...`) or OpenAI (`sk-...`) key. Keys are encrypted with AES-256-GCM before being stored.
+Go to **Settings** and add your Anthropic (`sk-ant-...`) or OpenAI (`sk-...`) key. Keys are encrypted with AES-256-GCM before being stored.
+
+## Data Storage
+
+- Session metadata and chat history: `prisma/dev.db` (SQLite)
+- Markdown documents: `data/docs/<session-id>.md` (one file per session)
 
 ## Stack
 
-- Next.js 14 (App Router) + TypeScript
+- Next.js 16 (App Router) + TypeScript
 - Prisma v7 + SQLite
-- NextAuth.js (Google OAuth)
 - CodeMirror (markdown editor)
 - Anthropic SDK + OpenAI SDK
 - Vitest

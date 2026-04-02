@@ -1,15 +1,12 @@
-import { redirect, notFound } from 'next/navigation'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { readDoc } from '@/lib/local-docs'
 import { SessionView } from '@/components/SessionView'
 
-export default async function SessionPage({ params }: { params: { id: string } }) {
-  const authSession = await getServerSession(authOptions)
-  if (!authSession?.user?.id) redirect('/login')
-
-  const chatSession = await prisma.chatSession.findFirst({
-    where: { id: params.id, userId: authSession.user.id },
+export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const chatSession = await prisma.chatSession.findUnique({
+    where: { id },
     include: {
       messages: {
         orderBy: { createdAt: 'asc' },
@@ -28,7 +25,7 @@ export default async function SessionPage({ params }: { params: { id: string } }
       sessionId={chatSession.id}
       title={chatSession.title}
       initialMessages={initialMessages}
-      initialMarkdown={chatSession.markdownContent}
+      initialMarkdown={readDoc(chatSession.id)}
     />
   )
 }

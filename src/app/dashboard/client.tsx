@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import { SessionCard } from '@/components/SessionCard'
 import { NewSessionDialog } from '@/components/NewSessionDialog'
-import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 
 interface SessionSummary {
@@ -15,10 +14,9 @@ interface SessionSummary {
 
 interface DashboardClientProps {
   initialSessions: SessionSummary[]
-  userName: string
 }
 
-export function DashboardClient({ initialSessions, userName }: DashboardClientProps) {
+export function DashboardClient({ initialSessions }: DashboardClientProps) {
   const [sessions, setSessions] = useState(initialSessions)
   const [showDialog, setShowDialog] = useState(false)
 
@@ -28,16 +26,13 @@ export function DashboardClient({ initialSessions, userName }: DashboardClientPr
     <div className="min-h-screen bg-gray-950">
       <header className="border-b border-gray-800 px-6 py-4 flex justify-between items-center">
         <span className="text-xl font-bold text-red-500">Socratize</span>
-        <div className="flex items-center gap-4 text-sm text-gray-400">
-          <Link href="/settings" className="hover:text-gray-200 transition">Settings</Link>
-          <button onClick={() => signOut()} className="hover:text-gray-200 transition">Sign out</button>
-        </div>
+        <Link href="/settings" className="text-sm text-gray-400 hover:text-gray-200 transition">Settings</Link>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-10">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-semibold">Hi, {userName}</h1>
+            <h1 className="text-2xl font-semibold">Sessions</h1>
             <p className="text-gray-500 text-sm mt-1">Your knowledge extraction sessions</p>
           </div>
           <button

@@ -1,26 +1,21 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { readDoc } from '@/lib/local-docs'
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  let user: { id: string }
-  try {
-    user = await requireAuth()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const session = await prisma.chatSession.findFirst({
-    where: { id: params.id, userId: user.id },
-    select: { title: true, markdownContent: true },
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const session = await prisma.chatSession.findUnique({
+    where: { id },
+    select: { title: true },
   })
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+  const markdownContent = readDoc(id)
   const filename = session.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
-  return new NextResponse(session.markdownContent, {
+  return new NextResponse(markdownContent, {
     headers: {
       'Content-Type': 'text/markdown',
       'Content-Disposition': `attachment; filename="${filename}.md"`,

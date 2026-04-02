@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
+import { readDoc, writeDoc } from '@/lib/local-docs'
 import { applyDocOps, type DocOp } from '@/lib/doc-ops'
 import {
   buildSystemPrompt,
@@ -14,28 +14,19 @@ import {
 } from '@/lib/extraction-prompt'
 
 export async function POST(request: Request) {
-  let user: { id: string }
-  try {
-    user = await requireAuth()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   const { sessionId, message } = await request.json()
   if (!sessionId || !message?.trim()) {
     return NextResponse.json({ error: 'sessionId and message are required' }, { status: 400 })
   }
 
-  // Load session, history, and user's API keys
+  // Load session, history, and API keys
   const [session, messages, allKeys] = await Promise.all([
-    prisma.chatSession.findFirst({ where: { id: sessionId, userId: user.id } }),
+    prisma.chatSession.findUnique({ where: { id: sessionId } }),
     prisma.message.findMany({
       where: { chatSessionId: sessionId },
       orderBy: { createdAt: 'asc' },
     }),
-    prisma.apiKey.findMany({
-      where: { userId: user.id },
-    }),
+    prisma.apiKey.findMany(),
   ])
 
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
@@ -50,8 +41,8 @@ export async function POST(request: Request) {
     )
   }
 
-  const decryptedKey = decrypt(apiKeyRecord.encryptedKey)
-  const systemPrompt = buildSystemPrompt(session.markdownContent)
+  const currentMarkdown = readDoc(sessionId)
+  const systemPrompt = buildSystemPrompt(currentMarkdown)
   const conversationMessages = buildMessages(messages, message.trim())
 
   const encoder = new TextEncoder()
@@ -64,6 +55,7 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
 
       try {
+        const decryptedKey = decrypt(apiKeyRecord.encryptedKey)
         if (apiKeyRecord.provider === 'anthropic') {
           const anthropic = new Anthropic({ apiKey: decryptedKey })
           const anthropicStream = anthropic.messages.stream({
@@ -131,8 +123,10 @@ export async function POST(request: Request) {
           }
         }
 
-        // Apply doc ops and save to DB
-        const newMarkdown = applyDocOps(session.markdownContent, extractedOps)
+        // Apply doc ops and save to disk + DB
+        const newMarkdown = applyDocOps(currentMarkdown, extractedOps)
+        writeDoc(sessionId, newMarkdown)
+
         await Promise.all([
           prisma.message.create({
             data: { chatSessionId: sessionId, role: 'user', content: message.trim() },
@@ -147,12 +141,13 @@ export async function POST(request: Request) {
           }),
           prisma.chatSession.update({
             where: { id: sessionId },
-            data: { markdownContent: newMarkdown },
+            data: { updatedAt: new Date() },
           }),
         ])
 
         send({ type: 'done' })
       } catch (err) {
+        console.error('[chat] Error:', err)
         // Never expose raw error strings — SDK auth errors may contain the API key
         const is401 = err instanceof Error && (err as any).status === 401
         send({

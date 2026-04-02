@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { deleteDoc } from '@/lib/local-docs'
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  let user: { id: string }
-  try {
-    user = await requireAuth()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const session = await prisma.chatSession.findFirst({
-    where: { id: params.id, userId: user.id },
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const session = await prisma.chatSession.findUnique({
+    where: { id },
     include: {
       messages: {
         orderBy: { createdAt: 'asc' },
@@ -23,18 +17,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   return NextResponse.json(session)
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  let user: { id: string }
-  try {
-    user = await requireAuth()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const session = await prisma.chatSession.findFirst({
-    where: { id: params.id, userId: user.id },
-  })
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const session = await prisma.chatSession.findUnique({ where: { id } })
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  await prisma.chatSession.delete({ where: { id: params.id } })
+  await prisma.chatSession.delete({ where: { id } })
+  deleteDoc(id)
   return new NextResponse(null, { status: 204 })
 }
