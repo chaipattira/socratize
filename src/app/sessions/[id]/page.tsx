@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { readDoc } from '@/lib/local-docs'
+import { listFiles } from '@/lib/knowledge-base'
 import { SessionView } from '@/components/SessionView'
+import fs from 'fs'
 
 export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -18,7 +20,12 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
 
   const initialMessages = chatSession.messages
     .filter(m => m.role === 'user' || m.role === 'assistant')
+    .filter(m => m.content !== '__KB_START__')
     .map(m => ({ id: m.id, role: m.role as 'user' | 'assistant', content: m.content }))
+
+  const knowledgeFolderPath = chatSession.knowledgeFolderPath ?? ''
+  const isKbSession = !!knowledgeFolderPath && fs.existsSync(knowledgeFolderPath)
+  const initialFiles = isKbSession ? listFiles(knowledgeFolderPath) : []
 
   return (
     <SessionView
@@ -26,7 +33,9 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
       title={chatSession.title}
       extractionMode={(chatSession.extractionMode as 'guided' | 'direct') ?? 'guided'}
       initialMessages={initialMessages}
-      initialMarkdown={readDoc(chatSession.id)}
+      initialMarkdown={isKbSession ? '' : readDoc(chatSession.id)}
+      knowledgeFolderPath={knowledgeFolderPath}
+      initialFiles={initialFiles}
     />
   )
 }
