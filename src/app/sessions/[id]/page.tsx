@@ -36,6 +36,8 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
       initialMarkdown={isKbSession ? '' : readDoc(chatSession.id)}
       knowledgeFolderPath={knowledgeFolderPath}
       initialFiles={initialFiles}
+      llmProvider={chatSession.llmProvider}
+      model={chatSession.model}
     />
   )
 }

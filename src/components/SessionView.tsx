@@ -14,6 +14,8 @@ interface SessionViewProps {
   initialMarkdown: string
   knowledgeFolderPath: string
   initialFiles: string[]
+  llmProvider: string
+  model: string
 }
 
 export function SessionView({
@@ -24,12 +26,15 @@ export function SessionView({
   initialMarkdown,
   knowledgeFolderPath,
   initialFiles,
+  llmProvider,
+  model,
 }: SessionViewProps) {
   const router = useRouter()
   const isKbSession = !!knowledgeFolderPath
 
   const [markdown, setMarkdown] = useState(initialMarkdown)
   const [isSocratizing, setIsSocratizing] = useState(false)
+  const [thinkingEnabled, setThinkingEnabled] = useState(false)
 
   // KB state
   const [files, setFiles] = useState<string[]>(initialFiles)
@@ -55,13 +60,14 @@ export function SessionView({
     setActiveFile({ filename, content })
   }, [sessionId])
 
-  const { messages, streamingText, isStreaming, error, sendMessage, startSocratize, triggerSocratize, triggerKbSession } = useChat({
+  const { messages, streamingText, streamingThinking, streamingToolCalls, isStreaming, error, sendMessage, startSocratize, triggerSocratize, triggerKbSession } = useChat({
     sessionId,
     initialMessages,
     onDocOps: handleDocOps,
     onFileUpdate: handleFileUpdate,
     isSocratizing,
     onSocratizeDone: handleSocratizeDone,
+    thinkingEnabled,
   })
 
   useEffect(() => {
@@ -128,17 +134,7 @@ export function SessionView({
 
       {/* Split pane */}
       <div className="flex flex-1 min-h-0">
-        <div className="flex-1 border-r border-gray-800 min-h-0">
-          <ChatPane
-            messages={messages}
-            streamingText={streamingText}
-            isStreaming={isStreaming}
-            error={error}
-            isSocratizing={isSocratizing}
-            onSend={sendMessage}
-          />
-        </div>
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 border-r border-gray-800 min-h-0 min-w-0 overflow-hidden">
           <EditorPane
             filename={isKbSession ? (activeFile?.filename ?? '') : filename}
             content={isKbSession ? (activeFile?.content ?? '') : markdown}
@@ -158,6 +154,22 @@ export function SessionView({
             files={isKbSession ? files : undefined}
             onFileClick={isKbSession ? handleFileClick : undefined}
             activeFilename={isKbSession ? activeFile?.filename : undefined}
+          />
+        </div>
+        <div className="flex-1 min-h-0">
+          <ChatPane
+            messages={messages}
+            streamingText={streamingText}
+            streamingThinking={streamingThinking}
+            streamingToolCalls={streamingToolCalls}
+            isStreaming={isStreaming}
+            error={error}
+            isSocratizing={isSocratizing}
+            onSend={sendMessage}
+            provider={llmProvider}
+            model={model}
+            thinkingEnabled={thinkingEnabled}
+            onThinkingToggle={() => setThinkingEnabled(v => !v)}
           />
         </div>
       </div>
