@@ -9,7 +9,7 @@ import { applyDocOps, type DocOp } from '@/lib/doc-ops'
 interface SessionViewProps {
   sessionId: string
   title: string
-  extractionMode: 'guided' | 'direct'
+  extractionMode: 'guided' | 'direct' | 'socratize' | 'socratize_eval'
   initialMessages: ChatMessage[]
   initialMarkdown: string
   knowledgeFolderPath: string
@@ -33,19 +33,20 @@ export function SessionView({
   const isKbSession = !!knowledgeFolderPath
 
   const [markdown, setMarkdown] = useState(initialMarkdown)
-  const [isSocratizing, setIsSocratizing] = useState(false)
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
 
   // KB state
   const [files, setFiles] = useState<string[]>(initialFiles)
   const [activeFile, setActiveFile] = useState<{ filename: string; content: string } | null>(null)
 
+  // Phase is fixed for the lifetime of the session — derived from extractionMode
+  const phase =
+    extractionMode === 'socratize' ? 'building' as const :
+    extractionMode === 'socratize_eval' ? 'testing' as const :
+    null
+
   const handleDocOps = useCallback((ops: DocOp[]) => {
     setMarkdown(prev => applyDocOps(prev, ops))
-  }, [])
-
-  const handleSocratizeDone = useCallback(() => {
-    setIsSocratizing(false)
   }, [])
 
   const handleFileUpdate = useCallback(({ filename, content }: { filename: string; content: string }) => {
@@ -60,20 +61,32 @@ export function SessionView({
     setActiveFile({ filename, content })
   }, [sessionId])
 
-  const { messages, streamingText, streamingThinking, streamingToolCalls, isStreaming, error, sendMessage, startSocratize, triggerSocratize, triggerKbSession } = useChat({
+  const {
+    messages,
+    streamingText,
+    streamingThinking,
+    streamingToolCalls,
+    isStreaming,
+    error,
+    sendMessage,
+    triggerBuildPhase,
+    triggerKbSession,
+  } = useChat({
     sessionId,
     initialMessages,
     onDocOps: handleDocOps,
     onFileUpdate: handleFileUpdate,
-    isSocratizing,
-    onSocratizeDone: handleSocratizeDone,
+    phase,
     thinkingEnabled,
   })
 
   useEffect(() => {
-    if (isKbSession && initialMessages.length === 0) {
+    if (extractionMode === 'socratize' && initialMessages.length === 0) {
+      triggerBuildPhase()
+    } else if (isKbSession && initialMessages.length === 0) {
       triggerKbSession()
     }
+    // socratize_eval: no auto-trigger — user sends the first test prompt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // intentionally runs once on mount
 
@@ -92,12 +105,6 @@ export function SessionView({
   const handleDownload = useCallback(() => {
     window.location.href = `/api/sessions/${sessionId}/export`
   }, [sessionId])
-
-  const handleSocratize = useCallback(() => {
-    startSocratize()
-    setIsSocratizing(true)
-    triggerSocratize()
-  }, [startSocratize, triggerSocratize])
 
   const filename =
     title
@@ -118,18 +125,7 @@ export function SessionView({
           </button>
           <span className="text-sm text-gray-400">{title}</span>
         </div>
-        <div className="flex items-center gap-3">
-          {!isKbSession && (
-            <button
-              onClick={handleSocratize}
-              disabled={isStreaming || isSocratizing || !markdown.trim()}
-              className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm px-4 py-1.5 rounded-lg font-medium transition"
-            >
-              Socratize!
-            </button>
-          )}
-          <span className="text-lg font-bold text-red-500">Socratize</span>
-        </div>
+        <span className="text-lg font-bold text-red-500">Socratize</span>
       </div>
 
       {/* Split pane */}
@@ -164,7 +160,7 @@ export function SessionView({
             streamingToolCalls={streamingToolCalls}
             isStreaming={isStreaming}
             error={error}
-            isSocratizing={isSocratizing}
+            phase={phase}
             onSend={sendMessage}
             provider={llmProvider}
             model={model}

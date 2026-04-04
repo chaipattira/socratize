@@ -31,7 +31,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     <SessionView
       sessionId={chatSession.id}
       title={chatSession.title}
-      extractionMode={(chatSession.extractionMode as 'guided' | 'direct') ?? 'guided'}
+      extractionMode={(chatSession.extractionMode as 'guided' | 'direct' | 'socratize' | 'socratize_eval') ?? 'guided'}
       initialMessages={initialMessages}
       initialMarkdown={isKbSession ? '' : readDoc(chatSession.id)}
       knowledgeFolderPath={knowledgeFolderPath}
