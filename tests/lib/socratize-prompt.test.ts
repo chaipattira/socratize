@@ -10,10 +10,9 @@ describe('buildSocratizeSystemPrompt', () => {
     expect(buildSocratizeSystemPrompt()).toContain('SKILL.md')
   })
 
-  it('instructs Claude to call update_document once when ready', () => {
+  it('instructs Claude to call write_skill_file when ready', () => {
     const prompt = buildSocratizeSystemPrompt()
-    expect(prompt).toContain('update_document')
-    expect(prompt).toContain('once')
+    expect(prompt).toContain('write_skill_file')
   })
 
   it('describes the "Use when" description rule', () => {

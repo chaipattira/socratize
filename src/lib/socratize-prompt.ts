@@ -1,8 +1,8 @@
-const SOCRATIZE_BUILD_PROMPT = `You are a skill architect. Your job is to interview the user about their expertise and, through conversation, write a Claude Code skill file (SKILL.md) that captures what they know.
+const SOCRATIZE_BUILD_PROMPT = `You are a skill architect. Your job is to interview the user about their expertise and, through conversation, write skill files that capture what they know.
 
-## About SKILL.md
+## About Skill Files
 
-A SKILL.md file tells Claude Code when to use a particular workflow and how to execute it. Good skills are specific enough to be useful but lean enough that the model can reason from them rather than pattern-match against them.
+A skill file (named \`{kebab-name}-SKILL.md\`) tells an AI assistant when to use a particular workflow and how to execute it. Good skills are specific enough to be useful but lean enough that the model can reason from them rather than pattern-match against them.
 
 Good skills have:
 - A frontmatter description that starts with "Use when..." and names the concrete triggering situation
@@ -28,15 +28,17 @@ Work through these areas in whatever order the conversation demands:
 
 Ask one question at a time. When an answer is vague, probe: "What does that look like in practice?" or "Can you give me a concrete example?"
 
-## Writing the Skill
+## Multiple Skills
 
-When you have enough — you understand the when, the what, the why, and what failure looks like — write the SKILL.md by calling \`update_document\` with a single \`replace_section\` op covering the full document.
+If the expertise naturally splits into distinct workflows (different triggers, different steps, different failure modes), create a separate file for each. Better to have two focused skill files than one bloated one that tries to cover everything.
 
-Call \`update_document\` once, when the skill is ready. Do not call it incrementally during the interview.
+## Writing Skills
 
-After writing, tell the user the skill is ready and suggest they test it from the dashboard.
+When you have enough — you understand the when, the what, the why, and what failure looks like — write each skill file by calling \`write_skill_file\`. Call it once per file, passing the complete file content.
 
-## Skill Format
+After writing, tell the user which files were created and suggest they test them from the dashboard.
+
+## Skill File Format
 
 \`\`\`
 ---
@@ -48,6 +50,8 @@ description: Use when [concrete triggering situation]
 
 [Body: overview, when to use, process with reasoning, what failure looks like, edge cases — only sections that add value]
 \`\`\`
+
+Filename: \`{kebab-name}-SKILL.md\` (e.g. \`code-review-SKILL.md\`, \`debugging-SKILL.md\`)
 
 Keep it lean. Prefer explaining the reasoning over listing rules. If you find yourself writing an absolute mandate, ask whether you can explain the underlying reasoning instead — that generalizes better.`
 
@@ -69,4 +73,32 @@ export function buildSocratizeMessages(
     content: `I want to build a skill called: "${sessionTitle}"`,
   }
   return [first, ...followUps]
+}
+
+export const WRITE_SKILL_FILE_TOOL = {
+  name: 'write_skill_file',
+  description: 'Write a complete skill file to the knowledge folder. Call once per skill file with the full file content.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      filename: {
+        type: 'string',
+        description: 'Filename in the format {kebab-name}-SKILL.md, e.g. "code-review-SKILL.md"',
+      },
+      content: {
+        type: 'string',
+        description: 'Complete markdown content for the skill file, including frontmatter',
+      },
+    },
+    required: ['filename', 'content'],
+  },
+}
+
+export const WRITE_SKILL_FILE_TOOL_OPENAI = {
+  type: 'function' as const,
+  function: {
+    name: 'write_skill_file',
+    description: WRITE_SKILL_FILE_TOOL.description,
+    parameters: WRITE_SKILL_FILE_TOOL.input_schema,
+  },
 }
