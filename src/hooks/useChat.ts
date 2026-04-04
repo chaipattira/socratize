@@ -1,11 +1,23 @@
 import { useState, useCallback, useRef } from 'react'
 import { type DocOp } from '@/lib/doc-ops'
 
+export interface ThinkingBlock {
+  text: string
+}
+
+export interface ToolCallItem {
+  name: string
+  input: Record<string, unknown>
+  done: boolean
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   isSocratize?: boolean
+  thinking?: ThinkingBlock
+  toolCalls?: ToolCallItem[]
 }
 
 interface UseChatOptions {
