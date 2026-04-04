@@ -4,6 +4,7 @@ import OpenAI from 'openai'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
 import { readDoc, writeDoc } from '@/lib/local-docs'
+import { readKbFile, validateFilename } from '@/lib/knowledge-base'
 import { applyDocOps, type DocOp } from '@/lib/doc-ops'
 import {
   UPDATE_DOCUMENT_TOOL,
@@ -16,7 +17,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: sessionId } = await params
-  const { followUps = [] } = await request.json()
+  const { followUps = [], selectedSkillFile } = await request.json()
 
   const [session, allKeys] = await Promise.all([
     prisma.chatSession.findUnique({ where: { id: sessionId } }),
@@ -33,7 +34,18 @@ export async function POST(
     )
   }
 
-  const skill = readDoc(sessionId)
+  // Load skill from folder file if available, fall back to local doc for old sessions
+  let skill: string
+  if (selectedSkillFile && session.knowledgeFolderPath && validateFilename(selectedSkillFile)) {
+    try {
+      skill = readKbFile(session.knowledgeFolderPath, selectedSkillFile)
+    } catch {
+      skill = readDoc(sessionId)
+    }
+  } else {
+    skill = readDoc(sessionId)
+  }
+
   const systemPrompt = buildTestSystemPrompt(skill)
   const messages = buildTestMessages(followUps as TestMessage[])
 
