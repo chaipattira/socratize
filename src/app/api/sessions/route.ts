@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { readDoc, writeDoc } from '@/lib/local-docs'
 import fs from 'fs'
 
 export async function GET() {
@@ -42,14 +41,23 @@ export async function POST(request: Request) {
     )
   }
 
-  const folderPath = knowledgeFolderPath?.trim() ?? ''
+  // For eval sessions, inherit folder path from source session
+  let effectiveFolderPath = knowledgeFolderPath?.trim() ?? ''
+  if (extractionMode === 'socratize_eval' && sourceSessionId) {
+    const sourceSession = await prisma.chatSession.findUnique({
+      where: { id: sourceSessionId },
+      select: { knowledgeFolderPath: true },
+    })
+    effectiveFolderPath = sourceSession?.knowledgeFolderPath ?? ''
+  }
 
-  // Folder path is required for guided/direct (KB sessions), optional for skill modes
-  if (extractionMode === 'guided' || extractionMode === 'direct') {
-    if (!folderPath) {
+  // Folder is required for guided, direct, and socratize
+  const requiresFolder = ['guided', 'direct', 'socratize'].includes(extractionMode)
+  if (requiresFolder) {
+    if (!effectiveFolderPath) {
       return NextResponse.json({ error: 'knowledgeFolderPath is required' }, { status: 400 })
     }
-    if (!fs.existsSync(folderPath) || !fs.statSync(folderPath).isDirectory()) {
+    if (!fs.existsSync(effectiveFolderPath) || !fs.statSync(effectiveFolderPath).isDirectory()) {
       return NextResponse.json(
         { error: 'knowledgeFolderPath must be an existing directory' },
         { status: 400 }
@@ -58,16 +66,14 @@ export async function POST(request: Request) {
   }
 
   const session = await prisma.chatSession.create({
-    data: { title: title.trim(), llmProvider, model, extractionMode, knowledgeFolderPath: folderPath },
+    data: {
+      title: title.trim(),
+      llmProvider,
+      model,
+      extractionMode,
+      knowledgeFolderPath: effectiveFolderPath,
+    },
   })
-
-  // For eval sessions, copy the source session's skill doc to seed this session
-  if (extractionMode === 'socratize_eval' && sourceSessionId) {
-    const sourceDoc = readDoc(sourceSessionId)
-    if (sourceDoc.trim()) {
-      writeDoc(session.id, sourceDoc)
-    }
-  }
 
   return NextResponse.json(session, { status: 201 })
 }
