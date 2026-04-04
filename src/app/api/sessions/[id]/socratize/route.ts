@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
-import { readDoc, writeDoc } from '@/lib/local-docs'
+import { writeDoc } from '@/lib/local-docs'
 import { applyDocOps, type DocOp } from '@/lib/doc-ops'
 import {
   UPDATE_DOCUMENT_TOOL,
@@ -38,9 +38,8 @@ export async function POST(
     )
   }
 
-  const extractedMarkdown = readDoc(sessionId)
   const systemPrompt = buildSocratizeSystemPrompt()
-  const messages = buildSocratizeMessages(extractedMarkdown, followUps as SocratizeMessage[])
+  const messages = buildSocratizeMessages(session.title, followUps as SocratizeMessage[])
 
   const encoder = new TextEncoder()
   let fullAssistantText = ''
