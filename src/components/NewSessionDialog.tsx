@@ -68,11 +68,10 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
   const modes: { value: ExtractionMode; label: string; description: string }[] = [
     { value: 'guided', label: 'Help me discover it', description: 'Questions to surface what I know' },
     { value: 'direct', label: 'I know what to include', description: 'Walk through the steps myself' },
-    { value: 'socratize', label: 'Build a skill', description: 'Extract and write a Claude Code skill file' },
+    { value: 'socratize', label: 'Build a skill', description: 'Extract and write a skill file' },
   ]
 
-  // Folder path is required for guided/direct (used as KB root), optional for socratize
-  const canSubmit = !!title.trim() && (extractionMode === 'socratize' || !!folderPath.trim())
+  const canSubmit = !!title.trim() && !!folderPath.trim()
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -94,9 +93,6 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
           <div>
             <label className="block text-sm text-gray-400 mb-2">
               Knowledge base folder path
-              {extractionMode === 'socratize' && (
-                <span className="ml-1 text-gray-600">(optional)</span>
-              )}
             </label>
             <input
               value={folderPath}
