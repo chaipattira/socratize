@@ -144,7 +144,8 @@ async function runOpenAIKbLoop(
   systemPrompt: string,
   initialMessages: Array<{ role: 'user' | 'assistant'; content: string }>,
   folderPath: string,
-  send: (data: object) => void
+  send: (data: object) => void,
+  thinkingEnabled: boolean,
 ): Promise<string> {
   type OAIMessage = OpenAI.Chat.ChatCompletionMessageParam
   const loopMessages: OAIMessage[] = [
@@ -159,7 +160,8 @@ async function runOpenAIKbLoop(
       model,
       tools: KB_TOOLS_OPENAI,
       messages: loopMessages,
-    })
+      ...(thinkingEnabled ? { reasoning_effort: 'medium' } : {}),
+    } as any)
 
     const choice = response.choices[0]
     const message = choice.message
@@ -259,7 +261,7 @@ export async function POST(request: Request) {
           } else {
             const openai = new OpenAI({ apiKey: decryptedKey })
             fullAssistantText = await runOpenAIKbLoop(
-              openai, session.model, systemPrompt, conversationMessages, session.knowledgeFolderPath, send
+              openai, session.model, systemPrompt, conversationMessages, session.knowledgeFolderPath, send, thinkingEnabled
             )
           }
 
@@ -334,40 +336,76 @@ export async function POST(request: Request) {
             }
           } else {
             const openai = new OpenAI({ apiKey: decryptedKey })
-            const openaiStream = await openai.chat.completions.create({
-              model: session.model,
-              stream: true,
-              tools: [UPDATE_DOCUMENT_TOOL_OPENAI],
-              messages: [{ role: 'system', content: systemPrompt }, ...conversationMessages],
-            })
 
-            let toolCallBuffer = ''
-            let toolCallEmitted = false
-            let toolCallName = 'update_document'
+            if (thinkingEnabled) {
+              // Use Responses API to get reasoning summaries
+              const stream = openai.responses.stream({
+                model: session.model,
+                input: [
+                  { role: 'system', content: systemPrompt },
+                  ...conversationMessages,
+                ],
+                tools: [UPDATE_DOCUMENT_TOOL_OPENAI as any],
+                reasoning: { effort: 'medium', summary: 'auto' },
+              } as any)
 
-            for await (const chunk of openaiStream) {
-              const delta = chunk.choices[0]?.delta
-              if (delta?.content) {
-                fullAssistantText += delta.content
-                send({ type: 'text', delta: delta.content })
-              }
-              if (delta?.tool_calls?.[0]) {
-                if (!toolCallEmitted) {
-                  toolCallEmitted = true
-                  toolCallName = delta.tool_calls[0].function?.name ?? 'update_document'
-                  send({ type: 'tool_call', name: toolCallName, input: {} })
+              for await (const event of (stream as any)) {
+                if (event.type === 'response.output_item.done' && event.item?.type === 'reasoning') {
+                  const summaryText = (event.item.summary ?? [])
+                    .map((s: { text?: string }) => s.text ?? '')
+                    .join('')
+                  if (summaryText) send({ type: 'thinking', delta: summaryText })
+                } else if (event.type === 'response.output_item.added' && event.item?.type === 'function_call') {
+                  send({ type: 'tool_call', name: event.item.name, input: {} })
+                } else if (event.type === 'response.output_item.done' && event.item?.type === 'function_call') {
+                  try {
+                    const parsed = JSON.parse(event.item.arguments ?? '{}')
+                    extractedOps = parsed.ops ?? []
+                    send({ type: 'doc_ops', ops: extractedOps })
+                  } catch {}
+                  send({ type: 'tool_result', name: event.item.name, success: true })
+                } else if (event.type === 'response.output_text.delta') {
+                  fullAssistantText += event.delta ?? ''
+                  send({ type: 'text', delta: event.delta ?? '' })
                 }
-                if (delta.tool_calls[0].function?.arguments) {
-                  toolCallBuffer += delta.tool_calls[0].function.arguments
-                }
               }
-              if (chunk.choices[0]?.finish_reason === 'tool_calls' && toolCallBuffer) {
-                try {
-                  const parsed = JSON.parse(toolCallBuffer)
-                  extractedOps = parsed.ops ?? []
-                  send({ type: 'doc_ops', ops: extractedOps })
-                } catch {}
-                send({ type: 'tool_result', name: toolCallName, success: true })
+            } else {
+              // Existing Chat Completions streaming path
+              const openaiStream = await openai.chat.completions.create({
+                model: session.model,
+                stream: true,
+                tools: [UPDATE_DOCUMENT_TOOL_OPENAI],
+                messages: [{ role: 'system', content: systemPrompt }, ...conversationMessages],
+              })
+
+              let toolCallBuffer = ''
+              let toolCallEmitted = false
+              let toolCallName = 'update_document'
+
+              for await (const chunk of openaiStream) {
+                const delta = chunk.choices[0]?.delta
+                if (delta?.content) {
+                  fullAssistantText += delta.content
+                  send({ type: 'text', delta: delta.content })
+                }
+                if (delta?.tool_calls?.[0]) {
+                  if (!toolCallEmitted) {
+                    toolCallEmitted = true
+                    toolCallName = delta.tool_calls[0].function?.name ?? 'update_document'
+                    send({ type: 'tool_call', name: toolCallName, input: {} })
+                  }
+                  if (delta.tool_calls[0].function?.arguments) {
+                    toolCallBuffer += delta.tool_calls[0].function.arguments
+                  }
+                }
+                if (chunk.choices[0]?.finish_reason === 'tool_calls' && toolCallBuffer) {
+                  try {
+                    const parsed = JSON.parse(toolCallBuffer)
+                    extractedOps = parsed.ops ?? []
+                    send({ type: 'doc_ops', ops: extractedOps })
+                  } catch {}
+                  send({ type: 'tool_result', name: toolCallName, success: true })
+                }
               }
             }
           }
