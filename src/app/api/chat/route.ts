@@ -147,6 +147,71 @@ async function runOpenAIKbLoop(
   send: (data: object) => void,
   thinkingEnabled: boolean,
 ): Promise<string> {
+  if (thinkingEnabled) {
+    // Use Responses API to get reasoning summaries
+    type OAIInputItem = { role: string; content: string }
+    let inputItems: any[] = [
+      { role: 'system', content: systemPrompt },
+      ...initialMessages.map(m => ({ role: m.role, content: m.content })),
+    ]
+    let fullText = ''
+
+    while (true) {
+      const response = await (openai.responses.create as any)({
+        model,
+        tools: KB_TOOLS_OPENAI,
+        input: inputItems,
+        reasoning: { effort: 'medium', summary: 'auto' },
+      })
+
+      const functionCalls: { id: string; name: string; arguments: string }[] = []
+
+      for (const item of (response.output ?? []) as any[]) {
+        if (item.type === 'reasoning') {
+          const summaryText = ((item.summary ?? []) as any[])
+            .map((s: any) => s.text ?? '')
+            .join('')
+          if (summaryText) send({ type: 'thinking', delta: summaryText })
+        } else if (item.type === 'function_call') {
+          functionCalls.push({ id: item.call_id ?? item.id, name: item.name, arguments: item.arguments ?? '{}' })
+        } else if (item.type === 'message') {
+          const textContent = ((item.content ?? []) as any[])
+            .filter((c: any) => c.type === 'output_text')
+            .map((c: any) => c.text ?? '')
+            .join('')
+          if (textContent) fullText = textContent
+        }
+      }
+
+      if (functionCalls.length > 0) {
+        // Add assistant's output items to input for next iteration
+        inputItems = [...inputItems, ...(response.output ?? [])]
+
+        const toolResults: any[] = []
+        for (const fc of functionCalls) {
+          const input = JSON.parse(fc.arguments) as Record<string, unknown>
+          send({ type: 'tool_call', name: fc.name, input })
+          const result = executeKbTool(fc.name, input, folderPath)
+          if (result.fileUpdate) {
+            send({ type: 'file_update', filename: result.fileUpdate.filename, content: result.fileUpdate.content })
+          }
+          send({ type: 'tool_result', name: fc.name, success: !result.content.startsWith('Error') })
+          toolResults.push({
+            type: 'function_call_output',
+            call_id: fc.id,
+            output: result.content,
+          })
+        }
+        inputItems = [...inputItems, ...toolResults]
+      } else {
+        send({ type: 'text', delta: fullText })
+        break
+      }
+    }
+
+    return fullText
+  }
+
   type OAIMessage = OpenAI.Chat.ChatCompletionMessageParam
   const loopMessages: OAIMessage[] = [
     { role: 'system', content: systemPrompt },
