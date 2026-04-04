@@ -121,6 +121,7 @@ export function useChat({
               toolCallsList = [...toolCallsList, { name: event.name, input: event.input ?? {}, done: false }]
               setStreamingToolCalls([...toolCallsList])
             } else if (event.type === 'tool_result') {
+              // Assumes tool_result events arrive in the same order as tool_call (sequential execution)
               const idx = toolCallsList.findLastIndex(tc => !tc.done)
               if (idx !== -1) {
                 toolCallsList = toolCallsList.map((tc, i) => i === idx ? { ...tc, done: true } : tc)
