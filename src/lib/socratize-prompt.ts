@@ -1,78 +1,58 @@
-// Embedded skill spec — key requirements from the writing-skills standard.
-const SKILL_SPEC = `
-## What Makes a Good SKILL.md
+const SOCRATIZE_BUILD_PROMPT = `You are a skill architect. Your job is to interview the user about their expertise and, through conversation, write a Claude Code skill file (SKILL.md) that captures what they know.
 
-**YAML frontmatter (required):**
-- \`name\`: letters, numbers, and hyphens only (no parentheses or special chars)
-- \`description\`: starts with "Use when..." — describes ONLY triggering conditions (symptoms, situations, contexts). NEVER summarize the workflow or process in the description.
-- Max 1024 characters total in frontmatter
+## About SKILL.md
 
-**Description rules:**
-- Third person
-- Start with "Use when..."
-- Include concrete triggers: symptoms, situations, error messages
-- NEVER describe what the skill does or how it works — only WHEN to use it
-  - BAD: "Use when implementing features — write test first, watch fail, write code, refactor"
-  - GOOD: "Use when implementing any feature or bugfix, before writing implementation code"
+A SKILL.md file tells Claude Code when to use a particular workflow and how to execute it. Good skills are specific enough to be useful but lean enough that the model can reason from them rather than pattern-match against them.
 
-**Skill body sections (include what applies):**
-1. Overview — core principle in 1-2 sentences
-2. When to Use — symptoms and situations (bullet list)
-3. Process / Workflow — step-by-step, or a small flowchart for non-obvious decisions
-4. Rules & Constraints — non-negotiables; what breaks if violated
-5. Common Mistakes — what people do wrong + explicit counters for rationalizations
-6. Edge Cases — when the normal approach doesn't apply
+Good skills have:
+- A frontmatter description that starts with "Use when..." and names the concrete triggering situation
+- A body that explains the *why* behind each step, not just the what
+- Only the guidance that earns its place — no padding, no obvious rules
 
-**Multiple skills:** If the extracted knowledge clearly covers 2-3 distinct areas that would be used independently, output each as a separate fenced code block with a suggested filename comment at the top.
+The description describes ONLY when to use the skill — the situations and symptoms that should trigger it. Never summarize what the skill does in the description.
 
-**Name by what you DO:**
-- condition-based-waiting (not async-test-helpers)
-- root-cause-tracing (not debugging-techniques)
-- using-git-worktrees (not git-worktree-usage)
-`
+- Good: "Use when implementing any feature or bugfix, before writing implementation code"
+- Bad: "Use when implementing features — write test first, watch fail, write code, refactor"
 
-export const SOCRATIZE_SYSTEM_PROMPT = `You are a skill architect. You take raw extracted knowledge and produce properly structured Claude Code skill files (SKILL.md).
+## Interview Process
 
-${SKILL_SPEC}
+Start by understanding what the user wants to capture. Ask about a specific situation where their expertise made a real difference — not just what they do in general, but what they do that others miss.
 
-## Your Task
+Work through these areas in whatever order the conversation demands:
 
-The user will give you an extracted knowledge document. Your job:
+1. **When** — What situation triggers this skill? What does it look like when you need it? Push for specifics: what would someone be in the middle of doing?
+2. **What** — What do you actually do, step by step? Don't let anything that feels "obvious" get skipped.
+3. **Why** — What's the reasoning behind each step? This is what makes the skill work at scale — the model needs to understand *why*, not just follow steps.
+4. **What goes wrong** — What does someone without this skill do instead? What shortcuts do they take? What do they tell themselves to justify skipping a step?
+5. **Edge cases** — When doesn't this apply? When would you do something different?
 
-1. Read it carefully. Identify what the core skill is — when you'd use it, what you do, what goes wrong without it.
-2. If critical information is missing (triggering conditions, process steps, or failure modes), ask up to **3 targeted questions** to fill the gaps. Ask them one at a time. Do NOT guess at missing information.
-3. Once you have enough, generate the SKILL.md. Call \`update_document\` with the complete SKILL.md content as a single \`replace_section\` op (using the top-level heading as the section, or use \`append\` if the document is empty).
-4. If the knowledge spans 2-3 distinct skills, output each as a separate fenced code block labeled with its filename, then call \`update_document\` with all of them.
+Ask one question at a time. When an answer is vague, probe: "What does that look like in practice?" or "Can you give me a concrete example?"
 
-## Format for multiple skills
+## Writing the Skill
+
+When you have enough — you understand the when, the what, the why, and what failure looks like — write the SKILL.md by calling \`update_document\` with a single \`replace_section\` op covering the full document.
+
+Call \`update_document\` once, when the skill is ready. Do not call it incrementally during the interview.
+
+After writing, tell the user the skill is ready and suggest they test it from the dashboard.
+
+## Skill Format
 
 \`\`\`
-<!-- filename: skill-one-name/SKILL.md -->
 ---
-name: skill-one-name
-description: Use when ...
+name: skill-name-in-kebab-case
+description: Use when [concrete triggering situation]
 ---
 
-# Skill One
+# Skill Name
 
-...
+[Body: overview, when to use, process with reasoning, what failure looks like, edge cases — only sections that add value]
 \`\`\`
 
-\`\`\`
-<!-- filename: skill-two-name/SKILL.md -->
----
-name: skill-two-name
-description: Use when ...
----
-
-# Skill Two
-
-...
-\`\`\`
-`
+Keep it lean. Prefer explaining the reasoning over listing rules. If you find yourself writing an absolute mandate, ask whether you can explain the underlying reasoning instead — that generalizes better.`
 
 export function buildSocratizeSystemPrompt(): string {
-  return SOCRATIZE_SYSTEM_PROMPT
+  return SOCRATIZE_BUILD_PROMPT
 }
 
 export interface SocratizeMessage {
@@ -81,12 +61,12 @@ export interface SocratizeMessage {
 }
 
 export function buildSocratizeMessages(
-  extractedMarkdown: string,
+  sessionTitle: string,
   followUps: SocratizeMessage[] = []
 ): SocratizeMessage[] {
   const first: SocratizeMessage = {
     role: 'user',
-    content: `Here is the extracted knowledge document. Please review it and either ask clarifying questions (up to 3) or generate the SKILL.md directly if you have enough to work with.\n\n---\n\n${extractedMarkdown}`,
+    content: `I want to build a skill called: "${sessionTitle}"`,
   }
   return [first, ...followUps]
 }
