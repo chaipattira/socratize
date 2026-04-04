@@ -11,7 +11,7 @@ interface ChatPaneProps {
   streamingToolCalls: ToolCallItem[]
   isStreaming: boolean
   error: string | null
-  isSocratizing: boolean
+  phase: 'building' | 'testing' | null
   onSend: (message: string) => void
   provider: string
   model: string
@@ -62,7 +62,7 @@ export function ChatPane({
   streamingToolCalls,
   isStreaming,
   error,
-  isSocratizing,
+  phase,
   onSend,
   provider,
   model,
@@ -83,18 +83,43 @@ export function ChatPane({
     setInput('')
   }
 
+  const lastRole = messages.length > 0 ? messages[messages.length - 1].role : null
+
+  const avatarClass =
+    phase === 'building' ? 'bg-amber-600' :
+    phase === 'testing' ? 'bg-blue-600' :
+    'bg-red-600'
+
+  const headerContent = () => {
+    if (phase === 'building') return (
+      <>
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+        <span className="text-amber-400 font-medium">Building skill</span>
+      </>
+    )
+    if (phase === 'testing') return (
+      <>
+        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+        <span className="text-blue-400 font-medium">Testing skill</span>
+      </>
+    )
+    return <span>Conversation</span>
+  }
+
+  const placeholder = () => {
+    if (isStreaming) return 'Waiting for response...'
+    if (phase === 'building') return 'Answer the question above...'
+    if (phase === 'testing') return lastRole === 'assistant'
+      ? 'Give your feedback...'
+      : 'Send a test prompt as an end user would...'
+    return 'Share your expertise...'
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 py-2 bg-gray-900 border-b border-gray-800 text-xs text-gray-500 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {isSocratizing ? (
-            <>
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-red-400 font-medium">Socratize mode</span>
-            </>
-          ) : (
-            'Conversation'
-          )}
+          {headerContent()}
         </div>
         {supportsThinking(provider, model) && (
           <button
@@ -116,27 +141,16 @@ export function ChatPane({
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map(msg => (
-          <div
-            key={msg.id}
-            className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
-          >
-            <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                msg.role === 'assistant'
-                  ? msg.isSocratize
-                    ? 'bg-orange-600'
-                    : 'bg-red-600'
-                  : 'bg-blue-700'
-              }`}
-            >
+          <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+              msg.role === 'assistant' ? avatarClass : 'bg-blue-700'
+            }`}>
               {msg.role === 'assistant' ? 'S' : 'P'}
             </div>
             <div className="max-w-[85%] flex flex-col gap-0.5">
-              {/* Thinking block */}
               {msg.role === 'assistant' && msg.thinking && (
                 <ThinkingBlockView text={msg.thinking.text} />
               )}
-              {/* Tool call rows */}
               {msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0 && (
                 <div className="mb-1">
                   {msg.toolCalls.map((tc, i) => (
@@ -144,14 +158,9 @@ export function ChatPane({
                   ))}
                 </div>
               )}
-              {/* Message bubble */}
-              <div
-                className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === 'assistant'
-                    ? 'bg-gray-800 rounded-tl-sm'
-                    : 'bg-gray-700 rounded-tr-sm'
-                }`}
-              >
+              <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                msg.role === 'assistant' ? 'bg-gray-800 rounded-tl-sm' : 'bg-gray-700 rounded-tr-sm'
+              }`}>
                 <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed">
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
@@ -162,19 +171,13 @@ export function ChatPane({
 
         {(streamingText || streamingThinking || streamingToolCalls.length > 0) && (
           <div className="flex gap-3">
-            <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                isSocratizing ? 'bg-orange-600' : 'bg-red-600'
-              }`}
-            >
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarClass}`}>
               S
             </div>
             <div className="max-w-[85%] flex flex-col gap-0.5">
-              {/* Streaming thinking */}
               {streamingThinking && (
                 <ThinkingBlockView text={streamingThinking} isStreaming={!streamingText && streamingToolCalls.every(tc => tc.done)} />
               )}
-              {/* Streaming tool calls */}
               {streamingToolCalls.length > 0 && (
                 <div className="mb-1">
                   {streamingToolCalls.map((tc, i) => (
@@ -182,7 +185,6 @@ export function ChatPane({
                   ))}
                 </div>
               )}
-              {/* Streaming text */}
               {streamingText && (
                 <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-gray-800 text-sm leading-relaxed">
                   <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed">
@@ -210,13 +212,7 @@ export function ChatPane({
             value={input}
             onChange={e => setInput(e.target.value)}
             disabled={isStreaming}
-            placeholder={
-              isStreaming
-                ? 'Waiting for response...'
-                : isSocratizing
-                ? 'Answer the question above...'
-                : 'Share your expertise...'
-            }
+            placeholder={placeholder()}
             className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:border-gray-500 disabled:opacity-50"
           />
           <button
