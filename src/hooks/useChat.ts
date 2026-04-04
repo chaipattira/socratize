@@ -27,6 +27,7 @@ interface UseChatOptions {
   onFileUpdate?: (update: { filename: string; content: string }) => void
   phase: 'building' | 'testing' | null
   thinkingEnabled?: boolean
+  selectedSkillFile?: string
 }
 
 export function useChat({
@@ -36,6 +37,7 @@ export function useChat({
   onFileUpdate,
   phase,
   thinkingEnabled = false,
+  selectedSkillFile,
 }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [streamingText, setStreamingText] = useState('')
@@ -84,7 +86,7 @@ export function useChat({
           response = await fetch(`/api/sessions/${sessionId}/test`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ followUps: testFollowUps.current }),
+            body: JSON.stringify({ followUps: testFollowUps.current, selectedSkillFile }),
           })
         } else {
           response = await fetch('/api/chat', {
@@ -172,7 +174,7 @@ export function useChat({
         setIsStreaming(false)
       }
     },
-    [sessionId, isStreaming, onDocOps, onFileUpdate, phase, thinkingEnabled]
+    [sessionId, isStreaming, onDocOps, onFileUpdate, phase, thinkingEnabled, selectedSkillFile]
   )
 
   // Fires the first LLM turn for the build phase (no prior user message)
