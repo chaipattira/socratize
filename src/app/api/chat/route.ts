@@ -112,10 +112,12 @@ async function runAnthropicKbLoop(
       const toolResults: Anthropic.ToolResultBlockParam[] = []
 
       for (const toolUse of toolUseBlocks) {
+        send({ type: 'tool_call', name: toolUse.name, input: toolUse.input })
         const result = executeKbTool(toolUse.name, toolUse.input, folderPath)
         if (result.fileUpdate) {
           send({ type: 'file_update', filename: result.fileUpdate.filename, content: result.fileUpdate.content })
         }
+        send({ type: 'tool_result', name: toolUse.name, success: !result.content.startsWith('Error') })
         toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result.content })
       }
 
@@ -165,10 +167,12 @@ async function runOpenAIKbLoop(
         if (toolCall.type !== 'function') continue
         const name = toolCall.function.name
         const input = JSON.parse(toolCall.function.arguments) as Record<string, unknown>
+        send({ type: 'tool_call', name, input })
         const result = executeKbTool(name, input, folderPath)
         if (result.fileUpdate) {
           send({ type: 'file_update', filename: result.fileUpdate.filename, content: result.fileUpdate.content })
         }
+        send({ type: 'tool_result', name, success: !result.content.startsWith('Error') })
         toolResults.push({
           role: 'tool',
           tool_call_id: toolCall.id,
@@ -291,11 +295,14 @@ export async function POST(request: Request) {
 
             let toolInputBuffer = ''
             let inToolUse = false
+            let currentToolName = ''
 
             for await (const event of anthropicStream) {
               if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') {
                 inToolUse = true
                 toolInputBuffer = ''
+                currentToolName = event.content_block.name
+                send({ type: 'tool_call', name: currentToolName, input: {} })
               } else if (event.type === 'content_block_delta') {
                 if (event.delta.type === 'text_delta') {
                   fullAssistantText += event.delta.text
@@ -309,8 +316,10 @@ export async function POST(request: Request) {
                   extractedOps = parsed.ops ?? []
                   send({ type: 'doc_ops', ops: extractedOps })
                 } catch {}
+                send({ type: 'tool_result', name: currentToolName, success: true })
                 inToolUse = false
                 toolInputBuffer = ''
+                currentToolName = ''
               }
             }
           } else {
@@ -323,14 +332,24 @@ export async function POST(request: Request) {
             })
 
             let toolCallBuffer = ''
+            let toolCallEmitted = false
+            let toolCallName = 'update_document'
+
             for await (const chunk of openaiStream) {
               const delta = chunk.choices[0]?.delta
               if (delta?.content) {
                 fullAssistantText += delta.content
                 send({ type: 'text', delta: delta.content })
               }
-              if (delta?.tool_calls?.[0]?.function?.arguments) {
-                toolCallBuffer += delta.tool_calls[0].function.arguments
+              if (delta?.tool_calls?.[0]) {
+                if (!toolCallEmitted) {
+                  toolCallEmitted = true
+                  toolCallName = delta.tool_calls[0].function?.name ?? 'update_document'
+                  send({ type: 'tool_call', name: toolCallName, input: {} })
+                }
+                if (delta.tool_calls[0].function?.arguments) {
+                  toolCallBuffer += delta.tool_calls[0].function.arguments
+                }
               }
               if (chunk.choices[0]?.finish_reason === 'tool_calls' && toolCallBuffer) {
                 try {
@@ -338,6 +357,7 @@ export async function POST(request: Request) {
                   extractedOps = parsed.ops ?? []
                   send({ type: 'doc_ops', ops: extractedOps })
                 } catch {}
+                send({ type: 'tool_result', name: toolCallName, success: true })
               }
             }
           }
