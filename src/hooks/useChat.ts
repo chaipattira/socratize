@@ -25,8 +25,7 @@ interface UseChatOptions {
   initialMessages?: ChatMessage[]
   onDocOps: (ops: DocOp[]) => void
   onFileUpdate?: (update: { filename: string; content: string }) => void
-  isSocratizing: boolean
-  onSocratizeDone: () => void
+  phase: 'building' | 'testing' | null
   thinkingEnabled?: boolean
 }
 
@@ -35,8 +34,7 @@ export function useChat({
   initialMessages = [],
   onDocOps,
   onFileUpdate,
-  isSocratizing,
-  onSocratizeDone,
+  phase,
   thinkingEnabled = false,
 }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
@@ -45,8 +43,10 @@ export function useChat({
   const [streamingToolCalls, setStreamingToolCalls] = useState<ToolCallItem[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Tracks socratize follow-up messages (assistant questions + user answers)
-  const socratizeFollowUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
+
+  // Separate conversation histories for each phase
+  const buildFollowUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
+  const testFollowUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -58,7 +58,7 @@ export function useChat({
         id: crypto.randomUUID(),
         role: 'user',
         content,
-        isSocratize: isSocratizing,
+        isSocratize: phase !== null,
       }
       setMessages(prev => [...prev, userMsg])
 
@@ -72,14 +72,19 @@ export function useChat({
       try {
         let response: Response
 
-        if (isSocratizing) {
-          // Add the user's answer to the follow-ups before sending
-          socratizeFollowUps.current.push({ role: 'user', content })
-
+        if (phase === 'building') {
+          buildFollowUps.current.push({ role: 'user', content })
           response = await fetch(`/api/sessions/${sessionId}/socratize`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ followUps: socratizeFollowUps.current }),
+            body: JSON.stringify({ followUps: buildFollowUps.current }),
+          })
+        } else if (phase === 'testing') {
+          testFollowUps.current.push({ role: 'user', content })
+          response = await fetch(`/api/sessions/${sessionId}/test`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ followUps: testFollowUps.current }),
           })
         } else {
           response = await fetch('/api/chat', {
@@ -97,7 +102,6 @@ export function useChat({
         const reader = response.body!.getReader()
         const decoder = new TextDecoder()
         let buffer = ''
-        let gotDocOps = false
 
         while (true) {
           const { value, done } = await reader.read()
@@ -121,7 +125,6 @@ export function useChat({
               toolCallsList = [...toolCallsList, { name: event.name, input: event.input ?? {}, done: false }]
               setStreamingToolCalls([...toolCallsList])
             } else if (event.type === 'tool_result') {
-              // Assumes tool_result events arrive in the same order as tool_call (sequential execution)
               const idx = toolCallsList.findLastIndex(tc => !tc.done)
               if (idx !== -1) {
                 toolCallsList = toolCallsList.map((tc, i) => i === idx ? { ...tc, done: true } : tc)
@@ -129,7 +132,8 @@ export function useChat({
               }
             } else if (event.type === 'doc_ops') {
               onDocOps(event.ops)
-              gotDocOps = true
+              // In both building and testing phases, doc_ops just updates the skill.
+              // There is no phase transition — that's determined by extractionMode at session creation.
             } else if (event.type === 'file_update') {
               onFileUpdate?.({ filename: event.filename, content: event.content })
             } else if (event.type === 'error') {
@@ -139,7 +143,7 @@ export function useChat({
                 id: crypto.randomUUID(),
                 role: 'assistant',
                 content: assistantText,
-                isSocratize: isSocratizing,
+                isSocratize: phase !== null,
                 thinking: thinkingText ? { text: thinkingText } : undefined,
                 toolCalls: toolCallsList.length ? toolCallsList : undefined,
               }
@@ -148,14 +152,10 @@ export function useChat({
               setStreamingThinking('')
               setStreamingToolCalls([])
 
-              if (isSocratizing) {
-                // Track assistant's reply in follow-ups
-                socratizeFollowUps.current.push({ role: 'assistant', content: assistantText })
-                // If Claude wrote doc ops, the SKILL.md is done — exit socratize mode
-                if (gotDocOps) {
-                  socratizeFollowUps.current = []
-                  onSocratizeDone()
-                }
+              if (phase === 'building') {
+                buildFollowUps.current.push({ role: 'assistant', content: assistantText })
+              } else if (phase === 'testing') {
+                testFollowUps.current.push({ role: 'assistant', content: assistantText })
               }
             }
           }
@@ -163,26 +163,24 @@ export function useChat({
       } catch (err) {
         setError(String(err))
         setMessages(prev => prev.slice(0, -1))
-        if (isSocratizing) {
-          // Roll back the follow-up we just added
-          socratizeFollowUps.current = socratizeFollowUps.current.slice(0, -1)
+        if (phase === 'building') {
+          buildFollowUps.current = buildFollowUps.current.slice(0, -1)
+        } else if (phase === 'testing') {
+          testFollowUps.current = testFollowUps.current.slice(0, -1)
         }
       } finally {
         setIsStreaming(false)
       }
     },
-    [sessionId, isStreaming, onDocOps, isSocratizing, onSocratizeDone, thinkingEnabled]
+    [sessionId, isStreaming, onDocOps, onFileUpdate, phase, thinkingEnabled]
   )
 
-  const startSocratize = useCallback(() => {
-    socratizeFollowUps.current = []
-  }, [])
-
-  const triggerSocratize = useCallback(async () => {
+  // Fires the first LLM turn for the build phase (no prior user message)
+  const triggerBuildPhase = useCallback(async () => {
     if (isStreaming) return
     setError(null)
     setIsStreaming(true)
-    socratizeFollowUps.current = []
+    buildFollowUps.current = []
 
     let assistantText = ''
     setStreamingText('')
@@ -196,13 +194,12 @@ export function useChat({
 
       if (!response.ok) {
         const err = await response.json()
-        throw new Error(err.error ?? 'Failed to start Socratize')
+        throw new Error(err.error ?? 'Failed to start build phase')
       }
 
       const reader = response.body!.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
-      let gotDocOps = false
 
       while (true) {
         const { value, done } = await reader.read()
@@ -221,7 +218,6 @@ export function useChat({
             setStreamingText(assistantText)
           } else if (event.type === 'doc_ops') {
             onDocOps(event.ops)
-            gotDocOps = true
           } else if (event.type === 'error') {
             throw new Error(event.message)
           } else if (event.type === 'done') {
@@ -233,12 +229,7 @@ export function useChat({
             }
             setMessages(prev => [...prev, assistantMsg])
             setStreamingText('')
-            socratizeFollowUps.current.push({ role: 'assistant', content: assistantText })
-
-            if (gotDocOps) {
-              socratizeFollowUps.current = []
-              onSocratizeDone()
-            }
+            buildFollowUps.current.push({ role: 'assistant', content: assistantText })
           }
         }
       }
@@ -247,7 +238,7 @@ export function useChat({
     } finally {
       setIsStreaming(false)
     }
-  }, [sessionId, isStreaming, onDocOps, onSocratizeDone])
+  }, [sessionId, isStreaming, onDocOps])
 
   const triggerKbSession = useCallback(async () => {
     if (isStreaming) return
@@ -338,8 +329,7 @@ export function useChat({
     isStreaming,
     error,
     sendMessage,
-    startSocratize,
-    triggerSocratize,
+    triggerBuildPhase,
     triggerKbSession,
   }
 }
