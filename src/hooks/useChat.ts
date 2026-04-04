@@ -27,6 +27,7 @@ interface UseChatOptions {
   onFileUpdate?: (update: { filename: string; content: string }) => void
   isSocratizing: boolean
   onSocratizeDone: () => void
+  thinkingEnabled?: boolean
 }
 
 export function useChat({
@@ -36,9 +37,12 @@ export function useChat({
   onFileUpdate,
   isSocratizing,
   onSocratizeDone,
+  thinkingEnabled = false,
 }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [streamingText, setStreamingText] = useState('')
+  const [streamingThinking, setStreamingThinking] = useState('')
+  const [streamingToolCalls, setStreamingToolCalls] = useState<ToolCallItem[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Tracks socratize follow-up messages (assistant questions + user answers)
@@ -59,7 +63,11 @@ export function useChat({
       setMessages(prev => [...prev, userMsg])
 
       let assistantText = ''
+      let thinkingText = ''
+      let toolCallsList: ToolCallItem[] = []
       setStreamingText('')
+      setStreamingThinking('')
+      setStreamingToolCalls([])
 
       try {
         let response: Response
@@ -77,7 +85,7 @@ export function useChat({
           response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId, message: content }),
+            body: JSON.stringify({ sessionId, message: content, thinkingEnabled }),
           })
         }
 
@@ -106,6 +114,18 @@ export function useChat({
             if (event.type === 'text') {
               assistantText += event.delta
               setStreamingText(assistantText)
+            } else if (event.type === 'thinking') {
+              thinkingText += event.delta
+              setStreamingThinking(thinkingText)
+            } else if (event.type === 'tool_call') {
+              toolCallsList = [...toolCallsList, { name: event.name, input: event.input ?? {}, done: false }]
+              setStreamingToolCalls([...toolCallsList])
+            } else if (event.type === 'tool_result') {
+              const idx = toolCallsList.findLastIndex(tc => !tc.done)
+              if (idx !== -1) {
+                toolCallsList = toolCallsList.map((tc, i) => i === idx ? { ...tc, done: true } : tc)
+                setStreamingToolCalls([...toolCallsList])
+              }
             } else if (event.type === 'doc_ops') {
               onDocOps(event.ops)
               gotDocOps = true
@@ -119,9 +139,13 @@ export function useChat({
                 role: 'assistant',
                 content: assistantText,
                 isSocratize: isSocratizing,
+                thinking: thinkingText ? { text: thinkingText } : undefined,
+                toolCalls: toolCallsList.length ? toolCallsList : undefined,
               }
               setMessages(prev => [...prev, assistantMsg])
               setStreamingText('')
+              setStreamingThinking('')
+              setStreamingToolCalls([])
 
               if (isSocratizing) {
                 // Track assistant's reply in follow-ups
@@ -146,7 +170,7 @@ export function useChat({
         setIsStreaming(false)
       }
     },
-    [sessionId, isStreaming, onDocOps, isSocratizing, onSocratizeDone]
+    [sessionId, isStreaming, onDocOps, isSocratizing, onSocratizeDone, thinkingEnabled]
   )
 
   const startSocratize = useCallback(() => {
@@ -230,13 +254,17 @@ export function useChat({
     setIsStreaming(true)
 
     let assistantText = ''
+    let thinkingText = ''
+    let toolCallsList: ToolCallItem[] = []
     setStreamingText('')
+    setStreamingThinking('')
+    setStreamingToolCalls([])
 
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, message: '__KB_START__', isKbTrigger: true }),
+        body: JSON.stringify({ sessionId, message: '__KB_START__', isKbTrigger: true, thinkingEnabled }),
       })
 
       if (!response.ok) {
@@ -263,6 +291,18 @@ export function useChat({
           if (event.type === 'text') {
             assistantText += event.delta
             setStreamingText(assistantText)
+          } else if (event.type === 'thinking') {
+            thinkingText += event.delta
+            setStreamingThinking(thinkingText)
+          } else if (event.type === 'tool_call') {
+            toolCallsList = [...toolCallsList, { name: event.name, input: event.input ?? {}, done: false }]
+            setStreamingToolCalls([...toolCallsList])
+          } else if (event.type === 'tool_result') {
+            const idx = toolCallsList.findLastIndex(tc => !tc.done)
+            if (idx !== -1) {
+              toolCallsList = toolCallsList.map((tc, i) => i === idx ? { ...tc, done: true } : tc)
+              setStreamingToolCalls([...toolCallsList])
+            }
           } else if (event.type === 'file_update') {
             onFileUpdate?.({ filename: event.filename, content: event.content })
           } else if (event.type === 'error') {
@@ -272,9 +312,13 @@ export function useChat({
               id: crypto.randomUUID(),
               role: 'assistant',
               content: assistantText,
+              thinking: thinkingText ? { text: thinkingText } : undefined,
+              toolCalls: toolCallsList.length ? toolCallsList : undefined,
             }
             setMessages(prev => [...prev, assistantMsg])
             setStreamingText('')
+            setStreamingThinking('')
+            setStreamingToolCalls([])
           }
         }
       }
@@ -283,7 +327,18 @@ export function useChat({
     } finally {
       setIsStreaming(false)
     }
-  }, [sessionId, isStreaming, onFileUpdate])
+  }, [sessionId, isStreaming, onFileUpdate, thinkingEnabled])
 
-  return { messages, streamingText, isStreaming, error, sendMessage, startSocratize, triggerSocratize, triggerKbSession }
+  return {
+    messages,
+    streamingText,
+    streamingThinking,
+    streamingToolCalls,
+    isStreaming,
+    error,
+    sendMessage,
+    startSocratize,
+    triggerSocratize,
+    triggerKbSession,
+  }
 }
