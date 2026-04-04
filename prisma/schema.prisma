@@ -28,6 +28,7 @@ model Message {
   role          String      // "user" | "assistant"
   content       String
   docOps        String?     // JSON string of DocOp[]
+  toolHistory   String?     // JSON string of intermediate tool call/result messages for KB sessions
   chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
   createdAt     DateTime    @default(now())
 

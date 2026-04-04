@@ -2,6 +2,7 @@
 import dynamic from 'next/dynamic'
 import { useCallback } from 'react'
 import { markdown } from '@codemirror/lang-markdown'
+import { EditorView } from '@codemirror/view'
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
 
@@ -28,7 +29,7 @@ export function EditorPane({
   const showSidebar = !!files
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-w-0 overflow-hidden">
       {showSidebar && (
         <div className="w-48 shrink-0 border-r border-gray-800 flex flex-col bg-gray-950">
           <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-800 font-medium uppercase tracking-wide">
@@ -76,7 +77,7 @@ export function EditorPane({
               onChange={onChange}
               height="100%"
               theme={"dark" as any}
-              extensions={[markdown()]}
+              extensions={[markdown(), EditorView.lineWrapping]}
               className="h-full text-sm"
               basicSetup={{
                 lineNumbers: false,

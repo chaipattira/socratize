@@ -1,7 +1,13 @@
+import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { DashboardClient } from './client'
 
 export default async function DashboardPage() {
+  const keyCount = await prisma.apiKey.count()
+  if (keyCount === 0) {
+    redirect('/settings?setup=1')
+  }
+
   const sessions = await prisma.chatSession.findMany({
     orderBy: { updatedAt: 'desc' },
     select: {

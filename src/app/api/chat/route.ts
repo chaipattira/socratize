@@ -76,16 +76,13 @@ async function runAnthropicKbLoop(
   anthropic: Anthropic,
   model: string,
   systemPrompt: string,
-  initialMessages: Array<{ role: 'user' | 'assistant'; content: string }>,
+  initialMessages: Anthropic.MessageParam[],
   folderPath: string,
   send: (data: object) => void,
   thinkingEnabled: boolean,
-): Promise<string> {
-  type AnthropicMessage = Anthropic.MessageParam
-  const loopMessages: AnthropicMessage[] = initialMessages.map(m => ({
-    role: m.role,
-    content: m.content,
-  }))
+): Promise<{ fullText: string; toolHistory: Anthropic.MessageParam[] }> {
+  const loopMessages: Anthropic.MessageParam[] = [...initialMessages]
+  const startLen = loopMessages.length
 
   let fullText = ''
 
@@ -135,25 +132,25 @@ async function runAnthropicKbLoop(
     }
   }
 
-  return fullText
+  return { fullText, toolHistory: loopMessages.slice(startLen) }
 }
 
 async function runOpenAIKbLoop(
   openai: OpenAI,
   model: string,
   systemPrompt: string,
-  initialMessages: Array<{ role: 'user' | 'assistant'; content: string }>,
+  initialMessages: OpenAI.Chat.ChatCompletionMessageParam[],
   folderPath: string,
   send: (data: object) => void,
   thinkingEnabled: boolean,
-): Promise<string> {
+): Promise<{ fullText: string; toolHistory: any[] }> {
   if (thinkingEnabled) {
     // Use Responses API to get reasoning summaries
-    type OAIInputItem = { role: string; content: string }
     let inputItems: any[] = [
       { role: 'system', content: systemPrompt },
-      ...initialMessages.map(m => ({ role: m.role, content: m.content })),
+      ...initialMessages,
     ]
+    const startLen = inputItems.length
     let fullText = ''
 
     while (true) {
@@ -209,14 +206,15 @@ async function runOpenAIKbLoop(
       }
     }
 
-    return fullText
+    return { fullText, toolHistory: inputItems.slice(startLen) }
   }
 
   type OAIMessage = OpenAI.Chat.ChatCompletionMessageParam
   const loopMessages: OAIMessage[] = [
     { role: 'system', content: systemPrompt },
-    ...initialMessages.map(m => ({ role: m.role, content: m.content } as OAIMessage)),
+    ...initialMessages,
   ]
+  const startLen = loopMessages.length
 
   let fullText = ''
 
@@ -260,7 +258,46 @@ async function runOpenAIKbLoop(
     }
   }
 
-  return fullText
+  return { fullText, toolHistory: loopMessages.slice(startLen) }
+}
+
+// Build Anthropic message history for KB sessions, expanding stored tool call/result blocks.
+// Each assistant message may have a toolHistory field containing the intermediate tool exchange
+// that preceded it. We expand those before the assistant's text response so the model sees
+// its full prior context and doesn't re-read files it already read.
+function buildAnthropicKbMessages(
+  history: Array<{ role: string; content: string; toolHistory?: string | null }>,
+  newMessage: string,
+): Anthropic.MessageParam[] {
+  const result: Anthropic.MessageParam[] = []
+  for (const m of history) {
+    if (m.role !== 'user' && m.role !== 'assistant') continue
+    if (m.role === 'assistant' && m.toolHistory) {
+      const toolMsgs: Anthropic.MessageParam[] = JSON.parse(m.toolHistory)
+      result.push(...toolMsgs)
+    }
+    result.push({ role: m.role as 'user' | 'assistant', content: m.content })
+  }
+  result.push({ role: 'user', content: newMessage })
+  return result
+}
+
+// Build OpenAI Chat message history for KB sessions, expanding stored tool call/result messages.
+function buildOpenAIChatKbMessages(
+  history: Array<{ role: string; content: string; toolHistory?: string | null }>,
+  newMessage: string,
+): OpenAI.Chat.ChatCompletionMessageParam[] {
+  const result: OpenAI.Chat.ChatCompletionMessageParam[] = []
+  for (const m of history) {
+    if (m.role !== 'user' && m.role !== 'assistant') continue
+    if (m.role === 'assistant' && m.toolHistory) {
+      const toolMsgs: OpenAI.Chat.ChatCompletionMessageParam[] = JSON.parse(m.toolHistory)
+      result.push(...toolMsgs)
+    }
+    result.push({ role: m.role as 'user' | 'assistant', content: m.content })
+  }
+  result.push({ role: 'user', content: newMessage })
+  return result
 }
 
 export async function POST(request: Request) {
@@ -316,24 +353,36 @@ export async function POST(request: Request) {
             (session.extractionMode as ExtractionMode) ?? 'guided'
           )
           const triggerMessage = message.trim()
-          const conversationMessages = buildMessages(messages, triggerMessage)
+
+          let kbToolHistory: any[] = []
 
           if (session.llmProvider === 'anthropic') {
             const anthropic = new Anthropic({ apiKey: decryptedKey })
-            fullAssistantText = await runAnthropicKbLoop(
-              anthropic, session.model, systemPrompt, conversationMessages, session.knowledgeFolderPath, send, thinkingEnabled
+            const anthropicMessages = buildAnthropicKbMessages(messages, triggerMessage)
+            const result = await runAnthropicKbLoop(
+              anthropic, session.model, systemPrompt, anthropicMessages, session.knowledgeFolderPath, send, thinkingEnabled
             )
+            fullAssistantText = result.fullText
+            kbToolHistory = result.toolHistory
           } else {
             const openai = new OpenAI({ apiKey: decryptedKey })
-            fullAssistantText = await runOpenAIKbLoop(
-              openai, session.model, systemPrompt, conversationMessages, session.knowledgeFolderPath, send, thinkingEnabled
+            const openaiMessages = buildOpenAIChatKbMessages(messages, triggerMessage)
+            const result = await runOpenAIKbLoop(
+              openai, session.model, systemPrompt, openaiMessages, session.knowledgeFolderPath, send, thinkingEnabled
             )
+            fullAssistantText = result.fullText
+            kbToolHistory = result.toolHistory
           }
 
           // Save messages (skip user message if this is the KB start trigger)
           const messageSaves: Promise<unknown>[] = [
             prisma.message.create({
-              data: { chatSessionId: sessionId, role: 'assistant', content: fullAssistantText },
+              data: {
+                chatSessionId: sessionId,
+                role: 'assistant',
+                content: fullAssistantText,
+                toolHistory: kbToolHistory.length ? JSON.stringify(kbToolHistory) : null,
+              },
             }),
             prisma.chatSession.update({ where: { id: sessionId }, data: { updatedAt: new Date() } }),
           ]

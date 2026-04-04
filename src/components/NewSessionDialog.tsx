@@ -2,6 +2,19 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+const MODELS: Record<string, { label: string; value: string }[]> = {
+  anthropic: [
+    { label: 'Claude Sonnet 4.6', value: 'claude-sonnet-4-6' },
+    { label: 'Claude Opus 4.6', value: 'claude-opus-4-6' },
+    { label: 'Claude Haiku 4.5', value: 'claude-haiku-4-5-20251001' },
+  ],
+  openai: [
+    { label: 'GPT-4o', value: 'gpt-4o' },
+    { label: 'GPT-4o mini', value: 'gpt-4o-mini' },
+    { label: 'GPT-4 Turbo', value: 'gpt-4-turbo' },
+  ],
+}
+
 interface NewSessionDialogProps {
   onClose: () => void
 }
@@ -18,7 +31,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
 
   const handleProviderChange = (p: string) => {
     setProvider(p)
-    setModel(p === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o')
+    setModel(MODELS[p][0].value)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,11 +128,15 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
 
           <div>
             <label className="block text-sm text-gray-400 mb-2">Model</label>
-            <input
+            <select
               value={model}
               onChange={e => setModel(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-gray-500"
-            />
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+            >
+              {MODELS[provider].map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
           </div>
 
           {error && <p className="text-red-400 text-sm">{error}</p>}

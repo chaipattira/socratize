@@ -1,11 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 interface ApiKey { id: string; provider: string }
 
 export default function SettingsClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isSetup = searchParams.get('setup') === '1'
   const [keys, setKeys] = useState<ApiKey[]>([])
   const [provider, setProvider] = useState('anthropic')
   const [keyValue, setKeyValue] = useState('')
@@ -51,6 +53,11 @@ export default function SettingsClient() {
       </header>
 
       <main className="max-w-xl mx-auto px-6 py-10">
+        {isSetup && (
+          <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-sm text-yellow-300">
+            No API key found. Please add one below to start using Socratize.
+          </div>
+        )}
         <h2 className="text-lg font-semibold mb-2">API Keys</h2>
         <p className="text-gray-500 text-sm mb-6">
           Keys are encrypted at rest. Required to start extraction sessions.
