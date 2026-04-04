@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { SessionCard } from '@/components/SessionCard'
 import { NewSessionDialog } from '@/components/NewSessionDialog'
 import Link from 'next/link'
@@ -8,6 +9,8 @@ interface SessionSummary {
   id: string
   title: string
   llmProvider: string
+  model: string
+  extractionMode: string
   updatedAt: string
   _count: { messages: number }
 }
@@ -17,10 +20,33 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ initialSessions }: DashboardClientProps) {
+  const router = useRouter()
   const [sessions, setSessions] = useState(initialSessions)
   const [showDialog, setShowDialog] = useState(false)
 
   const handleDelete = (id: string) => setSessions(prev => prev.filter(s => s.id !== id))
+
+  const handleTestSkill = async (
+    sourceSessionId: string,
+    title: string,
+    llmProvider: string,
+    model: string
+  ) => {
+    const res = await fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        llmProvider,
+        model,
+        extractionMode: 'socratize_eval',
+        sourceSessionId,
+      }),
+    })
+    if (!res.ok) return
+    const session = await res.json()
+    router.push(`/sessions/${session.id}`)
+  }
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -58,7 +84,10 @@ export function DashboardClient({ initialSessions }: DashboardClientProps) {
                 updatedAt={s.updatedAt}
                 messageCount={s._count.messages}
                 llmProvider={s.llmProvider}
+                model={s.model}
+                extractionMode={s.extractionMode}
                 onDelete={handleDelete}
+                onTestSkill={handleTestSkill}
               />
             ))}
           </div>

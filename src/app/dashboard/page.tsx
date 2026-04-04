@@ -12,7 +12,7 @@ export default async function DashboardPage() {
     orderBy: { updatedAt: 'desc' },
     select: {
       id: true, title: true, llmProvider: true, model: true,
-      createdAt: true, updatedAt: true,
+      extractionMode: true, createdAt: true, updatedAt: true,
       _count: { select: { messages: true } },
     },
   })

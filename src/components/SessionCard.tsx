@@ -8,7 +8,10 @@ interface SessionCardProps {
   updatedAt: string
   messageCount: number
   llmProvider: string
+  model: string
+  extractionMode: string
   onDelete: (id: string) => void
+  onTestSkill: (id: string, title: string, llmProvider: string, model: string) => void
 }
 
 export function SessionCard({
@@ -17,7 +20,10 @@ export function SessionCard({
   updatedAt,
   messageCount,
   llmProvider,
+  model,
+  extractionMode,
   onDelete,
+  onTestSkill,
 }: SessionCardProps) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
@@ -30,6 +36,11 @@ export function SessionCard({
     onDelete(id)
   }
 
+  const handleTestSkill = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onTestSkill(id, title, llmProvider, model)
+  }
+
   return (
     <div
       onClick={() => router.push(`/sessions/${id}`)}
@@ -37,13 +48,23 @@ export function SessionCard({
     >
       <div className="flex justify-between items-start">
         <h3 className="font-medium text-gray-100 group-hover:text-white transition">{title}</h3>
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="text-gray-600 hover:text-red-400 transition text-xs opacity-0 group-hover:opacity-100"
-        >
-          Delete
-        </button>
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
+          {extractionMode === 'socratize' && (
+            <button
+              onClick={handleTestSkill}
+              className="text-blue-400 hover:text-blue-300 transition text-xs"
+            >
+              Test skill →
+            </button>
+          )}
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-gray-600 hover:text-red-400 transition text-xs"
+          >
+            Delete
+          </button>
+        </div>
       </div>
       <div className="mt-2 flex items-center gap-3 text-xs text-gray-600">
         <span>{messageCount} messages</span>
@@ -51,6 +72,18 @@ export function SessionCard({
         <span className="capitalize">{llmProvider}</span>
         <span>·</span>
         <span>{new Date(updatedAt).toLocaleDateString()}</span>
+        {extractionMode === 'socratize' && (
+          <>
+            <span>·</span>
+            <span className="text-amber-600">skill</span>
+          </>
+        )}
+        {extractionMode === 'socratize_eval' && (
+          <>
+            <span>·</span>
+            <span className="text-blue-600">eval</span>
+          </>
+        )}
       </div>
     </div>
   )
