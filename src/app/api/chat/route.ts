@@ -78,7 +78,8 @@ async function runAnthropicKbLoop(
   systemPrompt: string,
   initialMessages: Array<{ role: 'user' | 'assistant'; content: string }>,
   folderPath: string,
-  send: (data: object) => void
+  send: (data: object) => void,
+  thinkingEnabled: boolean,
 ): Promise<string> {
   type AnthropicMessage = Anthropic.MessageParam
   const loopMessages: AnthropicMessage[] = initialMessages.map(m => ({
@@ -91,17 +92,20 @@ async function runAnthropicKbLoop(
   while (true) {
     const response = await anthropic.messages.create({
       model,
-      max_tokens: 4096,
+      max_tokens: thinkingEnabled ? 16000 : 4096,
       system: systemPrompt,
       tools: KB_TOOLS_ANTHROPIC as any,
+      ...(thinkingEnabled ? { thinking: { type: 'enabled', budget_tokens: 10000 } } : {}),
       messages: loopMessages,
-    })
+    } as any)
 
     const toolUseBlocks: Array<{ id: string; name: string; input: Record<string, unknown> }> = []
     let turnText = ''
 
     for (const block of response.content) {
-      if (block.type === 'text') {
+      if ((block as any).type === 'thinking') {
+        send({ type: 'thinking', delta: (block as any).thinking })
+      } else if (block.type === 'text') {
         turnText += block.text
       } else if (block.type === 'tool_use') {
         toolUseBlocks.push({ id: block.id, name: block.name, input: block.input as Record<string, unknown> })
@@ -197,6 +201,7 @@ export async function POST(request: Request) {
     sessionId,
     message,
     isKbTrigger = false,
+    thinkingEnabled = false,
   } = await request.json()
 
   if (!sessionId || !message?.trim()) {
@@ -249,7 +254,7 @@ export async function POST(request: Request) {
           if (session.llmProvider === 'anthropic') {
             const anthropic = new Anthropic({ apiKey: decryptedKey })
             fullAssistantText = await runAnthropicKbLoop(
-              anthropic, session.model, systemPrompt, conversationMessages, session.knowledgeFolderPath, send
+              anthropic, session.model, systemPrompt, conversationMessages, session.knowledgeFolderPath, send, thinkingEnabled
             )
           } else {
             const openai = new OpenAI({ apiKey: decryptedKey })
@@ -287,26 +292,31 @@ export async function POST(request: Request) {
             const anthropic = new Anthropic({ apiKey: decryptedKey })
             const anthropicStream = anthropic.messages.stream({
               model: session.model,
-              max_tokens: 2048,
+              max_tokens: thinkingEnabled ? 16000 : 2048,
               system: systemPrompt,
               tools: [UPDATE_DOCUMENT_TOOL as any],
+              ...(thinkingEnabled ? { thinking: { type: 'enabled', budget_tokens: 10000 } } : {}),
               messages: conversationMessages,
-            })
+            } as any)
 
             let toolInputBuffer = ''
             let inToolUse = false
             let currentToolName = ''
 
             for await (const event of anthropicStream) {
-              if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') {
-                inToolUse = true
-                toolInputBuffer = ''
-                currentToolName = event.content_block.name
-                send({ type: 'tool_call', name: currentToolName, input: {} })
+              if (event.type === 'content_block_start' && (event.content_block.type === 'thinking' || event.content_block.type === 'tool_use')) {
+                if (event.content_block.type === 'tool_use') {
+                  inToolUse = true
+                  toolInputBuffer = ''
+                  currentToolName = event.content_block.name
+                  send({ type: 'tool_call', name: currentToolName, input: {} })
+                }
               } else if (event.type === 'content_block_delta') {
                 if (event.delta.type === 'text_delta') {
                   fullAssistantText += event.delta.text
                   send({ type: 'text', delta: event.delta.text })
+                } else if ((event.delta as any).type === 'thinking_delta') {
+                  send({ type: 'thinking', delta: (event.delta as any).thinking })
                 } else if (event.delta.type === 'input_json_delta') {
                   toolInputBuffer += event.delta.partial_json
                 }
