@@ -45,6 +45,9 @@ export function SessionView({
     extractionMode === 'socratize_eval' ? 'testing' as const :
     null
 
+  // For eval: the active file in the editor is the skill being tested
+  const selectedSkillFile = phase === 'testing' ? activeFile?.filename : undefined
+
   const handleDocOps = useCallback((ops: DocOp[]) => {
     setMarkdown(prev => applyDocOps(prev, ops))
   }, [])
@@ -78,12 +81,13 @@ export function SessionView({
     onFileUpdate: handleFileUpdate,
     phase,
     thinkingEnabled,
+    selectedSkillFile,
   })
 
   useEffect(() => {
     if (extractionMode === 'socratize' && initialMessages.length === 0) {
       triggerBuildPhase()
-    } else if (isKbSession && initialMessages.length === 0) {
+    } else if (isKbSession && extractionMode !== 'socratize_eval' && initialMessages.length === 0) {
       triggerKbSession()
     }
     // socratize_eval: no auto-trigger — user sends the first test prompt
@@ -166,6 +170,7 @@ export function SessionView({
             model={model}
             thinkingEnabled={thinkingEnabled}
             onThinkingToggle={() => setThinkingEnabled(v => !v)}
+            selectedSkillFile={selectedSkillFile}
           />
         </div>
       </div>
