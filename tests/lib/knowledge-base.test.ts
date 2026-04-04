@@ -141,4 +141,13 @@ describe('validateSkillFilename', () => {
   it('rejects lowercase skill.md', () => {
     expect(validateSkillFilename('skill.md')).toBe(false)
   })
+
+  it('rejects filenames that contain but do not end with SKILL.md', () => {
+    expect(validateSkillFilename('notSKILL.md')).toBe(false)
+    expect(validateSkillFilename('mySKILL.md')).toBe(false)
+  })
+
+  it('rejects subdirectory paths', () => {
+    expect(validateSkillFilename('sub/code-review-SKILL.md')).toBe(false)
+  })
 })

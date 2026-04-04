@@ -15,8 +15,8 @@ export function validateFilename(filename: string): boolean {
 
 export function validateSkillFilename(filename: string): boolean {
   if (!validateFilename(filename)) return false
-  const basename = path.basename(filename)
-  return basename.includes('SKILL.md')
+  if (filename.includes('/')) return false // flat filenames only
+  return filename === 'SKILL.md' || filename.endsWith('-SKILL.md')
 }
 
 export function listFiles(folderPath: string, prefix = ''): string[] {
