@@ -4,6 +4,7 @@ import os from 'os'
 import path from 'path'
 import {
   validateFilename,
+  validateSkillFilename,
   listFiles,
   readKbFile,
   writeKbFile,
@@ -57,6 +58,15 @@ describe('listFiles', () => {
   it('returns empty array for empty folder', () => {
     expect(listFiles(tmpDir)).toEqual([])
   })
+
+  it('includes md files in subfolders with relative paths', () => {
+    fs.mkdirSync(path.join(tmpDir, 'sub'))
+    fs.writeFileSync(path.join(tmpDir, 'root.md'), '')
+    fs.writeFileSync(path.join(tmpDir, 'sub', 'child.md'), '')
+    fs.writeFileSync(path.join(tmpDir, 'sub', 'ignored.txt'), '')
+    const files = listFiles(tmpDir)
+    expect(files).toEqual(['root.md', 'sub/child.md'])
+  })
 })
 
 describe('readKbFile', () => {
@@ -106,5 +116,29 @@ describe('applyKbFileOps', () => {
 
   it('throws on path traversal', () => {
     expect(() => applyKbFileOps(tmpDir, '../bad.md', [])).toThrow('Invalid filename')
+  })
+})
+
+describe('validateSkillFilename', () => {
+  it('accepts SKILL.md', () => {
+    expect(validateSkillFilename('SKILL.md')).toBe(true)
+  })
+
+  it('accepts prefixed skill filenames', () => {
+    expect(validateSkillFilename('code-review-SKILL.md')).toBe(true)
+    expect(validateSkillFilename('debugging-SKILL.md')).toBe(true)
+  })
+
+  it('rejects plain md files', () => {
+    expect(validateSkillFilename('notes.md')).toBe(false)
+    expect(validateSkillFilename('code-review.md')).toBe(false)
+  })
+
+  it('rejects path traversal', () => {
+    expect(validateSkillFilename('../SKILL.md')).toBe(false)
+  })
+
+  it('rejects lowercase skill.md', () => {
+    expect(validateSkillFilename('skill.md')).toBe(false)
   })
 })

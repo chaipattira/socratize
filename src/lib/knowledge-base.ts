@@ -13,11 +13,24 @@ export function validateFilename(filename: string): boolean {
   return true
 }
 
-export function listFiles(folderPath: string): string[] {
-  const entries = fs.readdirSync(folderPath)
-  return entries
-    .filter(f => f.endsWith('.md'))
-    .sort()
+export function validateSkillFilename(filename: string): boolean {
+  if (!validateFilename(filename)) return false
+  const basename = path.basename(filename)
+  return basename.includes('SKILL.md')
+}
+
+export function listFiles(folderPath: string, prefix = ''): string[] {
+  const entries = fs.readdirSync(folderPath, { withFileTypes: true })
+  const files: string[] = []
+  for (const entry of entries) {
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name
+    if (entry.isDirectory()) {
+      files.push(...listFiles(path.join(folderPath, entry.name), relative))
+    } else if (entry.name.endsWith('.md')) {
+      files.push(relative)
+    }
+  }
+  return files.sort()
 }
 
 export function readKbFile(folderPath: string, filename: string): string {
