@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import ReactMarkdown from 'react-markdown'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView, keymap } from '@codemirror/view'
+import { insertNewlineAndIndent } from '@codemirror/commands'
 import type { ChatMessage, ToolCallItem } from '@/hooks/useChat'
 import { supportsThinking } from '@/lib/thinking-models'
 
@@ -104,10 +105,10 @@ export function ChatPane({
       '.cm-content': { minHeight: '42px', padding: '10px 14px' },
       '.cm-line': { padding: '0' },
     }),
-    keymap.of([{
-      key: 'Mod-Enter',
-      run: () => { submitRef.current(); return true },
-    }]),
+    keymap.of([
+      { key: 'Shift-Enter', run: insertNewlineAndIndent },
+      { key: 'Enter', run: () => { submitRef.current(); return true } },
+    ]),
   ], [])
 
   const lastRole = messages.length > 0 ? messages[messages.length - 1].role : null
