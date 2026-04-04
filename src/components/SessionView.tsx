@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatPane } from './ChatPane'
 import { EditorPane } from './EditorPane'
@@ -84,7 +84,11 @@ export function SessionView({
     selectedSkillFile,
   })
 
+  const hasAutoTriggered = useRef(false)
+
   useEffect(() => {
+    if (hasAutoTriggered.current) return
+    hasAutoTriggered.current = true
     if (extractionMode === 'socratize' && initialMessages.length === 0) {
       triggerBuildPhase()
     } else if (isKbSession && extractionMode !== 'socratize_eval' && initialMessages.length === 0) {
