@@ -1,8 +1,13 @@
 'use client'
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import ReactMarkdown from 'react-markdown'
+import { markdown } from '@codemirror/lang-markdown'
+import { EditorView, keymap } from '@codemirror/view'
 import type { ChatMessage, ToolCallItem } from '@/hooks/useChat'
 import { supportsThinking } from '@/lib/thinking-models'
+
+const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
 
 interface ChatPaneProps {
   messages: ChatMessage[]
@@ -17,6 +22,7 @@ interface ChatPaneProps {
   model: string
   thinkingEnabled: boolean
   onThinkingToggle: () => void
+  selectedSkillFile?: string
 }
 
 function ThinkingBlockView({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
@@ -68,20 +74,41 @@ export function ChatPane({
   model,
   thinkingEnabled,
   onThinkingToggle,
+  selectedSkillFile,
 }: ChatPaneProps) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const submitRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingText, streamingThinking, streamingToolCalls])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = useCallback(() => {
     if (!input.trim() || isStreaming) return
+    if (phase === 'testing' && !selectedSkillFile) return
     onSend(input.trim())
     setInput('')
-  }
+  }, [input, isStreaming, phase, selectedSkillFile, onSend])
+
+  useEffect(() => {
+    submitRef.current = handleSubmit
+  }, [handleSubmit])
+
+  const extensions = useMemo(() => [
+    markdown(),
+    EditorView.lineWrapping,
+    EditorView.theme({
+      '&': { minHeight: '42px', maxHeight: '200px' },
+      '.cm-scroller': { overflow: 'auto' },
+      '.cm-content': { minHeight: '42px', padding: '10px 14px' },
+      '.cm-line': { padding: '0' },
+    }),
+    keymap.of([{
+      key: 'Mod-Enter',
+      run: () => { submitRef.current(); return true },
+    }]),
+  ], [])
 
   const lastRole = messages.length > 0 ? messages[messages.length - 1].role : null
 
@@ -100,20 +127,25 @@ export function ChatPane({
     if (phase === 'testing') return (
       <>
         <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-        <span className="text-blue-400 font-medium">Testing skill</span>
+        <span className="text-blue-400 font-medium">
+          {selectedSkillFile ? `Testing: ${selectedSkillFile}` : 'Select a skill from the sidebar'}
+        </span>
       </>
     )
     return <span>Conversation</span>
   }
 
-  const placeholder = () => {
+  const getPlaceholder = () => {
     if (isStreaming) return 'Waiting for response...'
+    if (phase === 'testing' && !selectedSkillFile) return 'Select a skill file from the sidebar first...'
     if (phase === 'building') return 'Answer the question above...'
     if (phase === 'testing') return lastRole === 'assistant'
       ? 'Give your feedback...'
       : 'Send a test prompt as an end user would...'
     return 'Share your expertise...'
   }
+
+  const sendDisabled = isStreaming || !input.trim() || (phase === 'testing' && !selectedSkillFile)
 
   return (
     <div className="flex flex-col h-full">
@@ -206,24 +238,32 @@ export function ChatPane({
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-3 border-t border-gray-800">
-        <div className="flex gap-2">
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            disabled={isStreaming}
-            placeholder={placeholder()}
-            className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:border-gray-500 disabled:opacity-50"
-          />
+      <div className="p-3 border-t border-gray-800">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 rounded-lg overflow-hidden border border-gray-700 focus-within:border-gray-500 bg-gray-900 text-sm">
+            <CodeMirror
+              value={input}
+              onChange={setInput}
+              placeholder={getPlaceholder()}
+              theme="dark"
+              extensions={extensions}
+              basicSetup={{
+                lineNumbers: false,
+                foldGutter: false,
+                highlightActiveLine: false,
+                indentOnInput: false,
+              }}
+            />
+          </div>
           <button
-            type="submit"
-            disabled={isStreaming || !input.trim()}
-            className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition"
+            onClick={handleSubmit}
+            disabled={sendDisabled}
+            className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shrink-0"
           >
             Send
           </button>
         </div>
-      </form>
+      </div>
     </div>
   )
 }
