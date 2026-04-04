@@ -15,6 +15,8 @@ const MODELS: Record<string, { label: string; value: string }[]> = {
   ],
 }
 
+type ExtractionMode = 'guided' | 'direct' | 'socratize'
+
 interface NewSessionDialogProps {
   onClose: () => void
 }
@@ -24,7 +26,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
   const [title, setTitle] = useState('')
   const [provider, setProvider] = useState('anthropic')
   const [model, setModel] = useState('claude-sonnet-4-6')
-  const [extractionMode, setExtractionMode] = useState<'guided' | 'direct'>('guided')
+  const [extractionMode, setExtractionMode] = useState<ExtractionMode>('guided')
   const [folderPath, setFolderPath] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -43,11 +45,18 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
     const res = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title.trim(), llmProvider: provider, model, extractionMode, knowledgeFolderPath: folderPath.trim() }),
+      body: JSON.stringify({
+        title: title.trim(),
+        llmProvider: provider,
+        model,
+        extractionMode,
+        knowledgeFolderPath: folderPath.trim(),
+      }),
     })
 
     if (!res.ok) {
-      setError('Failed to create session')
+      const body = await res.json()
+      setError(body.error ?? 'Failed to create session')
       setLoading(false)
       return
     }
@@ -55,6 +64,15 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
     const session = await res.json()
     router.push(`/sessions/${session.id}`)
   }
+
+  const modes: { value: ExtractionMode; label: string; description: string }[] = [
+    { value: 'guided', label: 'Help me discover it', description: 'Questions to surface what I know' },
+    { value: 'direct', label: 'I know what to include', description: 'Walk through the steps myself' },
+    { value: 'socratize', label: 'Build a skill', description: 'Extract and write a Claude Code skill file' },
+  ]
+
+  // Folder path is required for guided/direct (used as KB root), optional for socratize
+  const canSubmit = !!title.trim() && (extractionMode === 'socratize' || !!folderPath.trim())
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -74,7 +92,12 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Knowledge base folder path</label>
+            <label className="block text-sm text-gray-400 mb-2">
+              Knowledge base folder path
+              {extractionMode === 'socratize' && (
+                <span className="ml-1 text-gray-600">(optional)</span>
+              )}
+            </label>
             <input
               value={folderPath}
               onChange={e => setFolderPath(e.target.value)}
@@ -86,31 +109,22 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
 
           <div>
             <label className="block text-sm text-gray-400 mb-2">How do you want to start?</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setExtractionMode('guided')}
-                className={`px-3 py-3 rounded-lg text-sm text-left border transition ${
-                  extractionMode === 'guided'
-                    ? 'bg-red-600/20 border-red-500 text-red-300'
-                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
-                }`}
-              >
-                <div className="font-medium mb-0.5">Help me discover it</div>
-                <div className="text-xs opacity-70">I'll be asked questions to surface what I know</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setExtractionMode('direct')}
-                className={`px-3 py-3 rounded-lg text-sm text-left border transition ${
-                  extractionMode === 'direct'
-                    ? 'bg-red-600/20 border-red-500 text-red-300'
-                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
-                }`}
-              >
-                <div className="font-medium mb-0.5">I know what to include</div>
-                <div className="text-xs opacity-70">I'll walk through the steps myself</div>
-              </button>
+            <div className="grid grid-cols-3 gap-2">
+              {modes.map(mode => (
+                <button
+                  key={mode.value}
+                  type="button"
+                  onClick={() => setExtractionMode(mode.value)}
+                  className={`px-3 py-3 rounded-lg text-sm text-left border transition ${
+                    extractionMode === mode.value
+                      ? 'bg-red-600/20 border-red-500 text-red-300'
+                      : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                  }`}
+                >
+                  <div className="font-medium mb-0.5">{mode.label}</div>
+                  <div className="text-xs opacity-70">{mode.description}</div>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -142,16 +156,12 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
           {error && <p className="text-red-400 text-sm">{error}</p>}
 
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 bg-gray-800 hover:bg-gray-700 text-sm py-2.5 rounded-lg transition"
-            >
+            <button type="button" onClick={onClose} className="flex-1 bg-gray-800 hover:bg-gray-700 text-sm py-2.5 rounded-lg transition">
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading || !title.trim() || !folderPath.trim()}
+              disabled={loading || !canSubmit}
               className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-sm py-2.5 rounded-lg font-medium transition"
             >
               {loading ? 'Starting...' : 'Start Session'}
