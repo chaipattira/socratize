@@ -34,6 +34,7 @@ export function SessionView({
 
   const [markdown, setMarkdown] = useState(initialMarkdown)
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
+  const [activeQuote, setActiveQuote] = useState('')
 
   // KB state
   const [files, setFiles] = useState<string[]>(initialFiles)
@@ -63,6 +64,14 @@ export function SessionView({
     const { content } = await res.json()
     setActiveFile({ filename, content })
   }, [sessionId])
+
+  const handleSelectionChange = useCallback((text: string) => {
+    if (text) setActiveQuote(text)
+  }, [])
+
+  const handleClearQuote = useCallback(() => {
+    setActiveQuote('')
+  }, [])
 
   const {
     messages,
@@ -158,9 +167,11 @@ export function SessionView({
             files={isKbSession ? files : undefined}
             onFileClick={isKbSession ? handleFileClick : undefined}
             activeFilename={isKbSession ? activeFile?.filename : undefined}
+            onSelectionChange={handleSelectionChange}
           />
         </div>
         <div className="flex-1 min-h-0">
+          {/* @ts-ignore */}
           <ChatPane
             messages={messages}
             streamingText={streamingText}
@@ -175,6 +186,8 @@ export function SessionView({
             thinkingEnabled={thinkingEnabled}
             onThinkingToggle={() => setThinkingEnabled(v => !v)}
             selectedSkillFile={selectedSkillFile}
+            quotedText={activeQuote}
+            onClearQuote={handleClearQuote}
           />
         </div>
       </div>
