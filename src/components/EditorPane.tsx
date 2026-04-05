@@ -1,6 +1,6 @@
 'use client'
 import dynamic from 'next/dynamic'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
 
@@ -14,6 +14,7 @@ interface EditorPaneProps {
   files?: string[]
   onFileClick?: (filename: string) => void
   activeFilename?: string
+  onSelectionChange?: (text: string) => void
 }
 
 export function EditorPane({
@@ -24,9 +25,27 @@ export function EditorPane({
   files,
   onFileClick,
   activeFilename,
+  onSelectionChange,
 }: EditorPaneProps) {
   const handleDownload = useCallback(() => onDownload(), [onDownload])
   const showSidebar = !!files
+
+  const extensions = useMemo(() => {
+    const base = [markdown(), EditorView.lineWrapping]
+    if (!onSelectionChange) return base
+    return [
+      ...base,
+      EditorView.updateListener.of(update => {
+        if (!update.selectionSet) return
+        const sel = update.state.selection.main
+        if (sel.empty) {
+          onSelectionChange('')
+        } else {
+          onSelectionChange(update.state.doc.sliceString(sel.from, sel.to))
+        }
+      }),
+    ]
+  }, [onSelectionChange])
 
   return (
     <div className="flex h-full min-w-0 overflow-hidden">
@@ -77,7 +96,7 @@ export function EditorPane({
               onChange={onChange}
               height="100%"
               theme={"dark" as any}
-              extensions={[markdown(), EditorView.lineWrapping]}
+              extensions={extensions}
               className="h-full text-sm"
               basicSetup={{
                 lineNumbers: false,
