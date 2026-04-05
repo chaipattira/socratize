@@ -65,11 +65,12 @@ async function runAnthropicSocratizeLoop(
       messages: loopMessages,
     })
 
+    let turnText = ''
     const toolUseBlocks: Array<{ id: string; name: string; input: Record<string, unknown> }> = []
 
     for (const block of response.content) {
       if (block.type === 'text') {
-        fullText += block.text
+        turnText += block.text
       } else if (block.type === 'tool_use') {
         toolUseBlocks.push({ id: block.id, name: block.name, input: block.input as Record<string, unknown> })
       }
@@ -91,6 +92,7 @@ async function runAnthropicSocratizeLoop(
       loopMessages.push({ role: 'assistant', content: response.content })
       loopMessages.push({ role: 'user', content: toolResults })
     } else {
+      fullText = turnText
       send({ type: 'text', delta: fullText })
       break
     }
