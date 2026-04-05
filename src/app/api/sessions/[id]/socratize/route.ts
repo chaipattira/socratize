@@ -55,8 +55,10 @@ async function runAnthropicSocratizeLoop(
 ): Promise<string> {
   const loopMessages: Anthropic.MessageParam[] = [...messages]
   let fullText = ''
+  let iterations = 0
 
   while (true) {
+    if (++iterations > 20) throw new Error('Socratize loop exceeded maximum iterations')
     const response = await anthropic.messages.create({
       model,
       max_tokens: 4096,
@@ -112,10 +114,13 @@ async function runOpenAISocratizeLoop(
   type OAIMessage = OpenAI.Chat.ChatCompletionMessageParam
   const loopMessages: OAIMessage[] = [{ role: 'system', content: systemPrompt }, ...messages]
   let fullText = ''
+  let iterations = 0
 
   while (true) {
+    if (++iterations > 20) throw new Error('Socratize loop exceeded maximum iterations')
     const response = await openai.chat.completions.create({
       model,
+      max_tokens: 4096,
       tools: SOCRATIZE_TOOLS_OPENAI,
       messages: loopMessages,
     })

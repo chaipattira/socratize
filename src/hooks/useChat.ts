@@ -185,7 +185,11 @@ export function useChat({
     buildFollowUps.current = []
 
     let assistantText = ''
+    let thinkingText = ''
+    let toolCallsList: ToolCallItem[] = []
     setStreamingText('')
+    setStreamingThinking('')
+    setStreamingToolCalls([])
 
     try {
       const response = await fetch(`/api/sessions/${sessionId}/socratize`, {
@@ -218,6 +222,17 @@ export function useChat({
           if (event.type === 'text') {
             assistantText += event.delta
             setStreamingText(assistantText)
+          } else if (event.type === 'tool_call') {
+            toolCallsList = [...toolCallsList, { name: event.name, input: event.input ?? {}, done: false }]
+            setStreamingToolCalls([...toolCallsList])
+          } else if (event.type === 'tool_result') {
+            const idx = toolCallsList.findLastIndex(tc => !tc.done)
+            if (idx !== -1) {
+              toolCallsList = toolCallsList.map((tc, i) => i === idx ? { ...tc, done: true } : tc)
+              setStreamingToolCalls([...toolCallsList])
+            }
+          } else if (event.type === 'file_update') {
+            onFileUpdate?.({ filename: event.filename, content: event.content })
           } else if (event.type === 'doc_ops') {
             onDocOps(event.ops)
           } else if (event.type === 'error') {
@@ -228,19 +243,23 @@ export function useChat({
               role: 'assistant',
               content: assistantText,
               isSocratize: true,
+              toolCalls: toolCallsList.length ? toolCallsList : undefined,
             }
             setMessages(prev => [...prev, assistantMsg])
             setStreamingText('')
+            setStreamingThinking('')
+            setStreamingToolCalls([])
             buildFollowUps.current.push({ role: 'assistant', content: assistantText })
           }
         }
       }
     } catch (err) {
       setError(String(err))
+      setStreamingToolCalls([])
     } finally {
       setIsStreaming(false)
     }
-  }, [sessionId, isStreaming, onDocOps])
+  }, [sessionId, isStreaming, onDocOps, onFileUpdate])
 
   const triggerKbSession = useCallback(async () => {
     if (isStreaming) return
