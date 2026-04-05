@@ -93,7 +93,7 @@ export function ChatPane({
     if (!input.trim() || isStreaming) return
     if (phase === 'testing' && !selectedSkillFile) return
     const body = quotedText
-      ? `> ${quotedText.split('\n').join('\n> ')}\n\n${input.trim()}`
+      ? `> ${quotedText.trim().split('\n').join('\n> ')}\n\n${input.trim()}`
       : input.trim()
     onSend(body)
     setInput('')
