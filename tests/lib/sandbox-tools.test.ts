@@ -127,6 +127,10 @@ describe('readSkillFile', () => {
     const result = readSkillFile([skillDir], 'missing-SKILL.md')
     expect(result).toMatch(/not found/)
   })
+
+  it('returns error string on traversal filename', () => {
+    expect(readSkillFile([skillDir], '../escape.md')).toMatch(/invalid filename/i)
+  })
 })
 
 describe('readSkillFilePreview', () => {
@@ -147,5 +151,9 @@ describe('readSkillFilePreview', () => {
 
   it('returns error string if file not found', () => {
     expect(readSkillFilePreview([skillDir], 'missing-SKILL.md')).toMatch(/not found/)
+  })
+
+  it('returns error string on traversal filename', () => {
+    expect(readSkillFilePreview([skillDir], '../escape.md')).toMatch(/invalid filename/i)
   })
 })

@@ -66,12 +66,14 @@ function findSkillFile(folderPaths: string[], filename: string): string | null {
 }
 
 export function readSkillFile(folderPaths: string[], filename: string): string {
+  if (!validateWorkspaceFilename(filename)) return `Error: skill file "${filename}" — invalid filename`
   const filePath = findSkillFile(folderPaths, filename)
   if (!filePath) return `Error: skill file "${filename}" not found in any configured folder`
   return fs.readFileSync(filePath, 'utf-8')
 }
 
 export function readSkillFilePreview(folderPaths: string[], filename: string): string {
+  if (!validateWorkspaceFilename(filename)) return `Error: skill file "${filename}" — invalid filename`
   const filePath = findSkillFile(folderPaths, filename)
   if (!filePath) return `Error: skill file "${filename}" not found in any configured folder`
   const content = fs.readFileSync(filePath, 'utf-8')
