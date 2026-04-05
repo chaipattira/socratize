@@ -6,11 +6,148 @@ import { decrypt } from '@/lib/encryption'
 import {
   buildSocratizeSystemPrompt,
   buildSocratizeMessages,
-  WRITE_SKILL_FILE_TOOL,
-  WRITE_SKILL_FILE_TOOL_OPENAI,
+  SOCRATIZE_TOOLS_ANTHROPIC,
+  SOCRATIZE_TOOLS_OPENAI,
   type SocratizeMessage,
 } from '@/lib/socratize-prompt'
-import { validateSkillFilename, writeKbFile } from '@/lib/knowledge-base'
+import { validateSkillFilename, writeKbFile, readKbFile, listFiles } from '@/lib/knowledge-base'
+
+function executeSocratizeTool(
+  name: string,
+  input: Record<string, unknown>,
+  folderPath: string
+): { result: string; fileUpdate?: { filename: string; content: string } } {
+  if (name === 'list_files') {
+    const all = listFiles(folderPath)
+    const skillFiles = all.filter(f => f.endsWith('-SKILL.md') || f === 'SKILL.md')
+    return { result: skillFiles.length > 0 ? skillFiles.join('\n') : '(no skill files yet)' }
+  }
+  if (name === 'read_file') {
+    const filename = input.filename as string
+    if (!validateSkillFilename(filename)) return { result: 'Error: invalid skill filename' }
+    try {
+      return { result: readKbFile(folderPath, filename) }
+    } catch {
+      return { result: `Error: file "${filename}" not found` }
+    }
+  }
+  if (name === 'write_skill_file') {
+    const filename = input.filename as string
+    const content = input.content as string
+    if (!validateSkillFilename(filename)) return { result: 'Error: invalid skill filename' }
+    try {
+      writeKbFile(folderPath, filename, content)
+      return { result: 'ok', fileUpdate: { filename, content } }
+    } catch (e) {
+      return { result: `Error: ${String(e)}` }
+    }
+  }
+  return { result: 'Error: unknown tool' }
+}
+
+async function runAnthropicSocratizeLoop(
+  anthropic: Anthropic,
+  model: string,
+  systemPrompt: string,
+  messages: Anthropic.MessageParam[],
+  folderPath: string,
+  send: (data: object) => void
+): Promise<string> {
+  const loopMessages: Anthropic.MessageParam[] = [...messages]
+  let fullText = ''
+
+  while (true) {
+    const response = await anthropic.messages.create({
+      model,
+      max_tokens: 4096,
+      system: systemPrompt,
+      tools: SOCRATIZE_TOOLS_ANTHROPIC as any,
+      messages: loopMessages,
+    })
+
+    const toolUseBlocks: Array<{ id: string; name: string; input: Record<string, unknown> }> = []
+
+    for (const block of response.content) {
+      if (block.type === 'text') {
+        fullText += block.text
+      } else if (block.type === 'tool_use') {
+        toolUseBlocks.push({ id: block.id, name: block.name, input: block.input as Record<string, unknown> })
+      }
+    }
+
+    if (response.stop_reason === 'tool_use') {
+      const toolResults: Anthropic.ToolResultBlockParam[] = []
+
+      for (const toolUse of toolUseBlocks) {
+        send({ type: 'tool_call', name: toolUse.name, input: toolUse.input })
+        const { result, fileUpdate } = executeSocratizeTool(toolUse.name, toolUse.input, folderPath)
+        if (fileUpdate) {
+          send({ type: 'file_update', filename: fileUpdate.filename, content: fileUpdate.content })
+        }
+        send({ type: 'tool_result', name: toolUse.name, success: !result.startsWith('Error') })
+        toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
+      }
+
+      loopMessages.push({ role: 'assistant', content: response.content })
+      loopMessages.push({ role: 'user', content: toolResults })
+    } else {
+      send({ type: 'text', delta: fullText })
+      break
+    }
+  }
+
+  return fullText
+}
+
+async function runOpenAISocratizeLoop(
+  openai: OpenAI,
+  model: string,
+  systemPrompt: string,
+  messages: OpenAI.Chat.ChatCompletionMessageParam[],
+  folderPath: string,
+  send: (data: object) => void
+): Promise<string> {
+  type OAIMessage = OpenAI.Chat.ChatCompletionMessageParam
+  const loopMessages: OAIMessage[] = [{ role: 'system', content: systemPrompt }, ...messages]
+  let fullText = ''
+
+  while (true) {
+    const response = await openai.chat.completions.create({
+      model,
+      tools: SOCRATIZE_TOOLS_OPENAI,
+      messages: loopMessages,
+    })
+
+    const choice = response.choices[0]
+    const message = choice.message
+
+    if (choice.finish_reason === 'tool_calls' && message.tool_calls) {
+      const toolResults: OAIMessage[] = []
+
+      for (const toolCall of message.tool_calls) {
+        if (toolCall.type !== 'function') continue
+        const name = toolCall.function.name
+        const input = JSON.parse(toolCall.function.arguments) as Record<string, unknown>
+        send({ type: 'tool_call', name, input })
+        const { result, fileUpdate } = executeSocratizeTool(name, input, folderPath)
+        if (fileUpdate) {
+          send({ type: 'file_update', filename: fileUpdate.filename, content: fileUpdate.content })
+        }
+        send({ type: 'tool_result', name, success: !result.startsWith('Error') })
+        toolResults.push({ role: 'tool', tool_call_id: toolCall.id, content: result })
+      }
+
+      loopMessages.push(message)
+      loopMessages.push(...toolResults)
+    } else {
+      fullText = message.content ?? ''
+      send({ type: 'text', delta: fullText })
+      break
+    }
+  }
+
+  return fullText
+}
 
 export async function POST(
   request: Request,
@@ -41,9 +178,6 @@ export async function POST(
     )
   }
 
-  const systemPrompt = buildSocratizeSystemPrompt()
-  const messages = buildSocratizeMessages(session.title, followUps as SocratizeMessage[])
-
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
@@ -53,76 +187,23 @@ export async function POST(
 
       try {
         const decryptedKey = decrypt(apiKeyRecord.encryptedKey)
+        const systemPrompt = buildSocratizeSystemPrompt()
+        const messages = buildSocratizeMessages(session.title, followUps as SocratizeMessage[])
 
         if (apiKeyRecord.provider === 'anthropic') {
           const anthropic = new Anthropic({ apiKey: decryptedKey })
-          const anthropicStream = anthropic.messages.stream({
-            model: session.model,
-            max_tokens: 4096,
-            system: systemPrompt,
-            tools: [WRITE_SKILL_FILE_TOOL as any],
-            messages,
-          })
-
-          let toolInputBuffer = ''
-          let inToolUse = false
-
-          for await (const event of anthropicStream) {
-            if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') {
-              inToolUse = true
-              toolInputBuffer = ''
-            } else if (event.type === 'content_block_delta') {
-              if (event.delta.type === 'text_delta') {
-                send({ type: 'text', delta: event.delta.text })
-              } else if (event.delta.type === 'input_json_delta') {
-                toolInputBuffer += event.delta.partial_json
-              }
-            } else if (event.type === 'content_block_stop' && inToolUse) {
-              try {
-                const parsed = JSON.parse(toolInputBuffer)
-                const { filename, content } = parsed
-                if (filename && content && validateSkillFilename(filename)) {
-                  writeKbFile(session.knowledgeFolderPath!, filename, content)
-                  send({ type: 'file_update', filename, content })
-                }
-              } catch {}
-              inToolUse = false
-              toolInputBuffer = ''
-            }
-          }
+          await runAnthropicSocratizeLoop(
+            anthropic, session.model, systemPrompt,
+            messages as Anthropic.MessageParam[],
+            session.knowledgeFolderPath!, send
+          )
         } else {
-          // OpenAI
           const openai = new OpenAI({ apiKey: decryptedKey })
-          const openaiStream = await openai.chat.completions.create({
-            model: session.model,
-            stream: true,
-            tools: [WRITE_SKILL_FILE_TOOL_OPENAI],
-            messages: [
-              { role: 'system', content: systemPrompt },
-              ...messages,
-            ],
-          })
-
-          let toolCallBuffer = ''
-          for await (const chunk of openaiStream) {
-            const delta = chunk.choices[0]?.delta
-            if (delta?.content) {
-              send({ type: 'text', delta: delta.content })
-            }
-            if (delta?.tool_calls?.[0]?.function?.arguments) {
-              toolCallBuffer += delta.tool_calls[0].function.arguments
-            }
-            if (chunk.choices[0]?.finish_reason === 'tool_calls' && toolCallBuffer) {
-              try {
-                const parsed = JSON.parse(toolCallBuffer)
-                const { filename, content } = parsed
-                if (filename && content && validateSkillFilename(filename)) {
-                  writeKbFile(session.knowledgeFolderPath!, filename, content)
-                  send({ type: 'file_update', filename, content })
-                }
-              } catch {}
-            }
-          }
+          await runOpenAISocratizeLoop(
+            openai, session.model, systemPrompt,
+            messages as OpenAI.Chat.ChatCompletionMessageParam[],
+            session.knowledgeFolderPath!, send
+          )
         }
 
         send({ type: 'done' })
