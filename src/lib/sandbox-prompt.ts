@@ -21,7 +21,7 @@ Use these to read and write files in the user's workspace:
 
 Before responding to any user request:
 1. Consider which skill files are relevant to what the user is asking.
-2. Call \`read_skill\` for any relevant skills you haven't already loaded this turn.
+2. Use \`read_skill_preview\` to scan unfamiliar skill files, then call \`read_skill\` for any relevant skills you haven't already loaded this turn.
 3. Use the workspace tools to read existing files, then write new or updated files as needed.
 
 ## Output Convention
@@ -97,72 +97,11 @@ export const SANDBOX_TOOLS_ANTHROPIC: Anthropic.Tool[] = [
   },
 ]
 
-export const SANDBOX_TOOLS_OPENAI: OpenAI.Chat.ChatCompletionTool[] = [
-  {
-    type: 'function',
-    function: {
-      name: 'list_skills',
-      description: 'List all available skill files across configured skill folders.',
-      parameters: { type: 'object', properties: {}, required: [] },
-    },
+export const SANDBOX_TOOLS_OPENAI: OpenAI.Chat.ChatCompletionTool[] = SANDBOX_TOOLS_ANTHROPIC.map(tool => ({
+  type: 'function' as const,
+  function: {
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.input_schema,
   },
-  {
-    type: 'function',
-    function: {
-      name: 'read_skill_preview',
-      description: 'Read the first 10 lines of a skill file.',
-      parameters: {
-        type: 'object',
-        properties: { filename: { type: 'string' } },
-        required: ['filename'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'read_skill',
-      description: 'Read the full content of a skill file.',
-      parameters: {
-        type: 'object',
-        properties: { filename: { type: 'string' } },
-        required: ['filename'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_files',
-      description: 'List all files in the workspace.',
-      parameters: { type: 'object', properties: {}, required: [] },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'read_file',
-      description: 'Read a file from the workspace.',
-      parameters: {
-        type: 'object',
-        properties: { filename: { type: 'string' } },
-        required: ['filename'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'write_file',
-      description: 'Create or overwrite a file in the workspace.',
-      parameters: {
-        type: 'object',
-        properties: {
-          filename: { type: 'string' },
-          content: { type: 'string' },
-        },
-        required: ['filename', 'content'],
-      },
-    },
-  },
-]
+}))
