@@ -24,6 +24,8 @@ interface ChatPaneProps {
   thinkingEnabled: boolean
   onThinkingToggle: () => void
   selectedSkillFile?: string
+  quotedText?: string
+  onClearQuote?: () => void
 }
 
 function ThinkingBlockView({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
@@ -76,6 +78,8 @@ export function ChatPane({
   thinkingEnabled,
   onThinkingToggle,
   selectedSkillFile,
+  quotedText,
+  onClearQuote,
 }: ChatPaneProps) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -88,9 +92,13 @@ export function ChatPane({
   const handleSubmit = useCallback(() => {
     if (!input.trim() || isStreaming) return
     if (phase === 'testing' && !selectedSkillFile) return
-    onSend(input.trim())
+    const body = quotedText
+      ? `> ${quotedText.split('\n').join('\n> ')}\n\n${input.trim()}`
+      : input.trim()
+    onSend(body)
     setInput('')
-  }, [input, isStreaming, phase, selectedSkillFile, onSend])
+    onClearQuote?.()
+  }, [input, isStreaming, phase, selectedSkillFile, onSend, quotedText, onClearQuote])
 
   useEffect(() => {
     submitRef.current = handleSubmit
@@ -240,6 +248,21 @@ export function ChatPane({
       </div>
 
       <div className="p-3 border-t border-gray-800">
+        {quotedText && (
+          <div className="mb-2 flex items-start gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-400">
+            <span className="shrink-0 text-gray-600">›</span>
+            <span className="flex-1 line-clamp-2 leading-relaxed">
+              {quotedText.length > 120 ? `${quotedText.slice(0, 120)}…` : quotedText}
+            </span>
+            <button
+              onClick={onClearQuote}
+              className="shrink-0 text-gray-600 hover:text-gray-300 transition"
+              aria-label="Clear quote"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <div className="flex-1 rounded-lg overflow-hidden border border-gray-700 focus-within:border-gray-500 bg-gray-900 text-sm">
             <CodeMirror
