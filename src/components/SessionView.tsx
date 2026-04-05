@@ -171,7 +171,6 @@ export function SessionView({
           />
         </div>
         <div className="flex-1 min-h-0">
-          {/* @ts-ignore */}
           <ChatPane
             messages={messages}
             streamingText={streamingText}
