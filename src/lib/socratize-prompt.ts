@@ -1,5 +1,9 @@
 const SOCRATIZE_BUILD_PROMPT = `You are a skill architect. Your job is to interview the user about their expertise and, through conversation, write skill files that capture what they know.
 
+## Starting a Session
+
+Before greeting the user, call \`list_files\` to see what skill files already exist in the folder, then call \`read_file\` for each one. If files exist, acknowledge them and ask whether the user wants to refine an existing skill or create a new one. If the folder is empty, proceed with the interview.
+
 ## About Skill Files
 
 A skill file (named \`{kebab-name}-SKILL.md\`) tells an AI assistant when to use a particular workflow and how to execute it. Good skills are specific enough to be useful but lean enough that the model can reason from them rather than pattern-match against them.
@@ -102,3 +106,43 @@ export const WRITE_SKILL_FILE_TOOL_OPENAI = {
     parameters: WRITE_SKILL_FILE_TOOL.input_schema,
   },
 }
+
+export const LIST_FILES_TOOL = {
+  name: 'list_files',
+  description: 'List all skill files (*-SKILL.md) already in the knowledge folder.',
+  input_schema: { type: 'object' as const, properties: {}, required: [] },
+}
+
+export const READ_FILE_TOOL = {
+  name: 'read_file',
+  description: 'Read the full content of an existing skill file.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      filename: { type: 'string', description: 'Filename, e.g. code-review-SKILL.md' },
+    },
+    required: ['filename'],
+  },
+}
+
+export const SOCRATIZE_TOOLS_ANTHROPIC = [LIST_FILES_TOOL, READ_FILE_TOOL, WRITE_SKILL_FILE_TOOL]
+
+export const SOCRATIZE_TOOLS_OPENAI = [
+  {
+    type: 'function' as const,
+    function: {
+      name: 'list_files',
+      description: LIST_FILES_TOOL.description,
+      parameters: LIST_FILES_TOOL.input_schema,
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'read_file',
+      description: READ_FILE_TOOL.description,
+      parameters: READ_FILE_TOOL.input_schema,
+    },
+  },
+  WRITE_SKILL_FILE_TOOL_OPENAI,
+]
