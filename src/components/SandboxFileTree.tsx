@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { isBinaryFile } from '@/lib/file-types'
 
 interface SandboxFileTreeProps {
   sandboxId: string
@@ -57,19 +58,25 @@ export function SandboxFileTree({
         {files.length === 0 ? (
           <p className="px-3 py-2 text-xs text-stone-400 italic">No files yet</p>
         ) : (
-          files.map(f => (
-            <button
-              key={f}
-              onClick={() => onFileClick(f)}
-              className={`w-full text-left px-3 py-1.5 text-xs font-mono truncate transition ${
-                f === activeFilename
-                  ? 'bg-linen text-stone-900'
-                  : 'text-stone-500 hover:bg-linen hover:text-stone-800'
-              }`}
-            >
-              {f}
-            </button>
-          ))
+          files.map(f => {
+            const isBinary = isBinaryFile(f)
+            const isActive = f === activeFilename
+            return (
+              <button
+                key={f}
+                onClick={() => onFileClick(f)}
+                className={`w-full text-left px-3 py-1.5 text-xs font-mono truncate transition ${
+                  isActive
+                    ? 'bg-linen text-stone-900'
+                    : isBinary
+                    ? 'text-stone-300 hover:bg-linen hover:text-stone-400'
+                    : 'text-stone-500 hover:bg-linen hover:text-stone-800'
+                }`}
+              >
+                {f}
+              </button>
+            )
+          })
         )}
       </div>
       <div className="px-3 py-2 border-t border-sepia shrink-0">
