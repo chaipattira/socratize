@@ -105,6 +105,7 @@ export function SandboxView({
     initStatus,
     triggerInit,
     sendMessage,
+    stopStreaming,
   } = useSandboxChat({
     sandboxId,
     initialMessages,
@@ -305,6 +306,7 @@ export function SandboxView({
             onClearQuote={() => setActiveQuote('')}
             onSend={handleSend}
             onReInject={handleReInject}
+            onStop={stopStreaming}
           />
         </div>
       </div>

@@ -69,6 +69,7 @@ interface SandboxChatProps {
   onClearQuote: () => void
   onSend: (message: string) => void
   onReInject: () => void
+  onStop: () => void
 }
 
 
@@ -89,6 +90,7 @@ export function SandboxChat({
   onClearQuote,
   onSend,
   onReInject,
+  onStop,
 }: SandboxChatProps) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -311,13 +313,23 @@ export function SandboxChat({
               basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, indentOnInput: false }}
             />
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={isStreaming || !input.trim()}
-            className="bg-wine hover:bg-wine-hover disabled:opacity-40 text-parchment px-4 py-2.5 rounded text-sm font-medium transition shrink-0"
-          >
-            Send
-          </button>
+          {isStreaming ? (
+            <button
+              onClick={onStop}
+              title="Stop"
+              className="bg-stone-700 hover:bg-stone-800 text-parchment px-3 py-2.5 rounded text-sm font-medium transition shrink-0"
+            >
+              ■
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!input.trim()}
+              className="bg-wine hover:bg-wine-hover disabled:opacity-40 text-parchment px-4 py-2.5 rounded text-sm font-medium transition shrink-0"
+            >
+              Send
+            </button>
+          )}
         </div>
       </div>
     </div>
