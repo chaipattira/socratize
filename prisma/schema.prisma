@@ -53,12 +53,13 @@ model Sandbox {
 }
 
 model SandboxMessage {
-  id        String   @id @default(cuid())
-  sandboxId String
-  role      String // "user" | "assistant"
-  content   String
-  createdAt DateTime @default(now())
-  sandbox   Sandbox  @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  sandboxId   String
+  role        String // "user" | "assistant"
+  content     String
+  toolHistory String? // JSON: intermediate tool_use/tool_result MessageParam[] for this exchange
+  createdAt   DateTime @default(now())
+  sandbox     Sandbox  @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
 
   @@index([sandboxId])
 }
