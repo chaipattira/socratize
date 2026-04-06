@@ -24,6 +24,8 @@ export function SandboxView({
   const router = useRouter()
   const [files, setFiles] = useState<string[]>(initialFiles)
   const [activeFile, setActiveFile] = useState<{ filename: string; content: string } | null>(null)
+  const activeFileRef = useRef(activeFile)
+  useEffect(() => { activeFileRef.current = activeFile }, [activeFile])
   const [loadedSkills, setLoadedSkills] = useState<string[]>([])
   const [recentSkills, setRecentSkills] = useState<string[]>([])
 
@@ -70,10 +72,14 @@ export function SandboxView({
   }, [])
 
   const handleFileClick = useCallback(async (filename: string) => {
-    const res = await fetch(`/api/sandboxes/${sandboxId}/files/${encodeURIComponent(filename)}`)
-    if (!res.ok) return
-    const { content } = await res.json()
-    setActiveFile({ filename, content })
+    try {
+      const res = await fetch(`/api/sandboxes/${sandboxId}/files/${encodeURIComponent(filename)}`)
+      if (!res.ok) return
+      const { content } = await res.json() as { content: string }
+      setActiveFile({ filename, content })
+    } catch {
+      // Silently ignore — file pane will just not update
+    }
   }, [sandboxId])
 
   const handleFilesUploaded = useCallback((filenames: string[]) => {
@@ -87,14 +93,19 @@ export function SandboxView({
   }, [])
 
   const handleFileChange = useCallback(async (value: string) => {
-    if (!activeFile) return
+    const current = activeFileRef.current
+    if (!current) return
     setActiveFile(prev => prev ? { ...prev, content: value } : null)
-    await fetch(`/api/sandboxes/${sandboxId}/files/${encodeURIComponent(activeFile.filename)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: value }),
-    })
-  }, [sandboxId, activeFile])
+    try {
+      await fetch(`/api/sandboxes/${sandboxId}/files/${encodeURIComponent(current.filename)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: value }),
+      })
+    } catch {
+      // Silent failure — file save is best-effort, user can retry by editing
+    }
+  }, [sandboxId])
 
   const handleReInject = useCallback(() => {
     setRecentSkills([])
