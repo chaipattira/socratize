@@ -178,6 +178,10 @@ export async function POST(
   const { id } = await params
   const { message, followUps = [] } = await request.json()
 
+  if (!message || typeof message !== 'string') {
+    return NextResponse.json({ error: 'message is required' }, { status: 400 })
+  }
+
   const [sandbox, allKeys] = await Promise.all([
     prisma.sandbox.findUnique({
       where: { id },
@@ -188,7 +192,9 @@ export async function POST(
 
   if (!sandbox) return NextResponse.json({ error: 'Sandbox not found' }, { status: 404 })
 
-  const apiKeyRecord = allKeys[0]
+  const anthropicKey = allKeys.find(k => k.provider === 'anthropic')
+  const openaiKey = allKeys.find(k => k.provider === 'openai')
+  const apiKeyRecord = anthropicKey ?? openaiKey
   if (!apiKeyRecord) {
     return NextResponse.json({ error: 'No API key found. Add one in Settings.' }, { status: 400 })
   }
@@ -218,10 +224,10 @@ export async function POST(
           { role: 'user' as const, content: currentMessage },
         ]
 
-        const model = apiKeyRecord.provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o'
+        const model = apiKeyRecord!.provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o'
         let assistantText = ''
 
-        if (apiKeyRecord.provider === 'anthropic') {
+        if (apiKeyRecord!.provider === 'anthropic') {
           const anthropic = new Anthropic({ apiKey: decryptedKey })
           assistantText = await runAnthropicLoop(
             anthropic, model, systemPrompt,
