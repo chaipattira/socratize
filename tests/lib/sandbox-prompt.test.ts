@@ -50,3 +50,47 @@ describe('SANDBOX_TOOLS_OPENAI', () => {
     expect(names).toContain('write_file')
   })
 })
+
+describe('baseline skills — R code writing', () => {
+  it('includes native pipe instruction', () => {
+    expect(buildSandboxSystemPrompt()).toContain('native pipe')
+  })
+
+  it('includes join_by instruction', () => {
+    expect(buildSandboxSystemPrompt()).toContain('join_by()')
+  })
+
+  it('includes .by grouping instruction', () => {
+    expect(buildSandboxSystemPrompt()).toContain('.by')
+  })
+
+  it('includes haven::read_sas instruction for SAS files', () => {
+    expect(buildSandboxSystemPrompt()).toContain('haven::read_sas')
+  })
+
+  it('warns about SAS files', () => {
+    expect(buildSandboxSystemPrompt()).toContain('.sas7bdat')
+  })
+})
+
+describe('baseline skills — file loading', () => {
+  it('instructs agent to use .txt companion', () => {
+    expect(buildSandboxSystemPrompt()).toContain('.txt companion')
+  })
+
+  it('covers docx extraction', () => {
+    expect(buildSandboxSystemPrompt()).toContain('python-docx')
+  })
+
+  it('covers pdf extraction', () => {
+    expect(buildSandboxSystemPrompt()).toContain('pypdf')
+  })
+
+  it('covers pptx extraction', () => {
+    expect(buildSandboxSystemPrompt()).toContain('markitdown')
+  })
+
+  it('covers xlsx extraction', () => {
+    expect(buildSandboxSystemPrompt()).toContain('openpyxl')
+  })
+})
