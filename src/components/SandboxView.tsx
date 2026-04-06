@@ -43,15 +43,20 @@ export function SandboxView({
 
   const [fileTreeWidth, setFileTreeWidth] = useState(192)
   const [chatWidth, setChatWidth] = useState(384)
+  const [terminalHeight, setTerminalHeight] = useState(280)
   const onFileTreeDrag = useCallback((delta: number) => {
     setFileTreeWidth(prev => Math.min(320, Math.max(120, prev + delta)))
   }, [])
   const onChatDrag = useCallback((delta: number) => {
     setChatWidth(prev => Math.min(600, Math.max(240, prev - delta)))
   }, [])
+  const onTerminalDrag = useCallback((delta: number) => {
+    setTerminalHeight(prev => Math.min(window.innerHeight * 0.6, Math.max(80, prev - delta)))
+  }, [])
 
   const fileTreeDragHandle = useDragResize(onFileTreeDrag)
   const chatDragHandle = useDragResize(onChatDrag)
+  const terminalDragHandle = useDragResize(onTerminalDrag, 'y')
 
   const handleFileUpdate = useCallback(({ filename, content }: { filename: string; content: string }) => {
     setActiveFile({ filename, content })
@@ -306,7 +311,11 @@ export function SandboxView({
 
       {/* Bottom: terminal panel */}
       {terminalOpen && (
-        <div style={{ height: 280 }} className="shrink-0 flex flex-col bg-[#1c1917]">
+        <div style={{ height: terminalHeight }} className="shrink-0 flex flex-col bg-[#1c1917]">
+          <div
+            onMouseDown={terminalDragHandle}
+            className="h-1 shrink-0 bg-stone-700 hover:bg-stone-500 cursor-row-resize transition-colors select-none"
+          />
           <div className="flex items-center justify-between px-3 py-1 border-b border-stone-700 shrink-0">
             <span className="text-xs text-stone-400 font-mono">Terminal</span>
             <button
