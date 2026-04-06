@@ -15,6 +15,7 @@ interface UseSandboxChatOptions {
   onFileUpdate?: (update: { filename: string; content: string }) => void
   onSkillsLoaded?: (skills: string[]) => void
   onCommandRun?: () => void
+  onCommandComplete?: () => void
 }
 
 const INIT_MESSAGE = 'List all available skills and read a preview of each one. Also list the workspace files so you know what\'s available. Summarize what you\'re equipped to help with and what files are in the workspace.'
@@ -25,6 +26,7 @@ export function useSandboxChat({
   onFileUpdate,
   onSkillsLoaded,
   onCommandRun,
+  onCommandComplete,
 }: UseSandboxChatOptions) {
   const [messages, setMessages] = useState<SandboxMessage[]>(initialMessages)
   const [streamingText, setStreamingText] = useState('')
@@ -35,6 +37,11 @@ export function useSandboxChat({
   const [initStatus, setInitStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
   const followUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
+  const abortRef = useRef<AbortController | null>(null)
+
+  const stopStreaming = useCallback(() => {
+    abortRef.current?.abort()
+  }, [])
 
   const runStream = useCallback(async (
     userContent: string,
@@ -45,6 +52,9 @@ export function useSandboxChat({
     isStreamingRef.current = true
     setError(null)
     setIsStreaming(true)
+
+    const abort = new AbortController()
+    abortRef.current = abort
 
     if (!isInit) {
       const userMsg: SandboxMessage = { id: crypto.randomUUID(), role: 'user', content: userContent }
@@ -68,6 +78,7 @@ export function useSandboxChat({
           thinkingEnabled: opts.thinkingEnabled ?? false,
           enabledSkills: opts.enabledSkills ?? null,
         }),
+        signal: abort.signal,
       })
 
       if (!response.ok) {
@@ -104,8 +115,10 @@ export function useSandboxChat({
           } else if (event.type === 'tool_result') {
             const idx = toolCallsList.findLastIndex(tc => !tc.done)
             if (idx !== -1) {
+              const completedName = toolCallsList[idx].name
               toolCallsList = toolCallsList.map((tc, i) => i === idx ? { ...tc, done: true } : tc)
               setStreamingToolCalls([...toolCallsList])
+              if (completedName === 'run_command') onCommandComplete?.()
             }
           } else if (event.type === 'file_update') {
             onFileUpdate?.({ filename: event.filename, content: event.content })
@@ -139,18 +152,21 @@ export function useSandboxChat({
         }
       }
     } catch (err) {
-      setError(String(err))
-      if (!isInit) {
-        setMessages(prev => prev.slice(0, -1))
-        followUps.current = followUps.current.slice(0, -1)
+      const isAbort = err instanceof DOMException && err.name === 'AbortError'
+      if (!isAbort) {
+        setError(String(err))
+        if (!isInit) {
+          setMessages(prev => prev.slice(0, -1))
+          followUps.current = followUps.current.slice(0, -1)
+        }
+        if (isInit) setInitStatus('error')
       }
-      if (isInit) setInitStatus('error')
     } finally {
       isStreamingRef.current = false
       setIsStreaming(false)
       if (isInit) setInitStatus(prev => prev === 'loading' ? 'error' : prev)
     }
-  }, [sandboxId, onFileUpdate, onSkillsLoaded, onCommandRun])
+  }, [sandboxId, onFileUpdate, onSkillsLoaded, onCommandRun, onCommandComplete])
 
   const triggerInit = useCallback(() => {
     setInitStatus('loading')
@@ -170,5 +186,6 @@ export function useSandboxChat({
     initStatus,
     triggerInit,
     sendMessage,
+    stopStreaming,
   }
 }
