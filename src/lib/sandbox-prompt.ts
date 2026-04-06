@@ -33,14 +33,11 @@ When you do need to load skills:
 
 ## Output Convention
 
-You write files and tell the user exactly what to run. Do not claim to execute code. When you write a file, say something like:
+You have a persistent shell — use \`run_command\` to execute code, not just write it. When you write a file, run it and verify it works before responding to the user. Show the user the actual output.
 
-"I've written \`solution.py\`. Run it with:
-\`\`\`
-python solution.py
-\`\`\`"
+The shell remembers your working directory, active virtualenv, and exports across \`run_command\` calls. The workspace directory is your starting \`cwd\`.
 
-This approach works equally well for coding tasks and non-coding tasks (essays, analyses, structured documents).`
+For non-code tasks (essays, analyses, structured documents), write files without running them.`
 
 export function buildSandboxSystemPrompt(): string {
   return SANDBOX_SYSTEM_PROMPT
@@ -100,6 +97,18 @@ export const SANDBOX_TOOLS_ANTHROPIC: Anthropic.Tool[] = [
         content: { type: 'string', description: 'Full file content' },
       },
       required: ['filename', 'content'],
+    },
+  },
+  {
+    name: 'run_command',
+    description: 'Run a shell command in the sandbox workspace. The shell is persistent — cd, exports, and activated virtualenvs carry across calls. Returns stdout and stderr combined. Use this to execute code, install packages, run tests, etc.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        command: { type: 'string', description: 'Shell command to execute, e.g. "python solution.py" or "pip install numpy"' },
+        timeout_seconds: { type: 'number', description: 'Max seconds to wait for the command (default: 30)' },
+      },
+      required: ['command'],
     },
   },
 ]
