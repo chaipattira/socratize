@@ -261,7 +261,7 @@ export async function POST(
 
         const model = apiKeyRecord!.provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o'
         let assistantText = ''
-        let toolDelta: unknown[] = []
+        let toolDelta: Anthropic.MessageParam[] | OpenAI.Chat.ChatCompletionMessageParam[] = []
 
         if (apiKeyRecord!.provider === 'anthropic') {
           const anthropic = new Anthropic({ apiKey: decryptedKey })
