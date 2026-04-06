@@ -1,0 +1,23 @@
+import { prisma } from '@/lib/prisma'
+import { SandboxDashboardClient } from './client'
+
+export default async function SandboxPage() {
+  const sandboxes = await prisma.sandbox.findMany({
+    orderBy: { updatedAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      skillFolderPaths: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  })
+
+  const serialized = sandboxes.map(s => ({
+    ...s,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+  }))
+
+  return <SandboxDashboardClient initialSandboxes={serialized} />
+}
