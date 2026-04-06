@@ -39,24 +39,19 @@ export function SandboxView({
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
   const [activeQuote, setActiveQuote] = useState('')
   const [terminalOpen, setTerminalOpen] = useState(false)
+  const [isCommandRunning, setIsCommandRunning] = useState(false)
 
   const [fileTreeWidth, setFileTreeWidth] = useState(192)
   const [chatWidth, setChatWidth] = useState(384)
-  const [terminalHeight, setTerminalHeight] = useState(280)
-
   const onFileTreeDrag = useCallback((delta: number) => {
     setFileTreeWidth(prev => Math.min(320, Math.max(120, prev + delta)))
   }, [])
   const onChatDrag = useCallback((delta: number) => {
     setChatWidth(prev => Math.min(600, Math.max(240, prev - delta)))
   }, [])
-  const onTerminalDrag = useCallback((delta: number) => {
-    setTerminalHeight(prev => Math.min(window.innerHeight * 0.6, Math.max(80, prev - delta)))
-  }, [])
 
   const fileTreeDragHandle = useDragResize(onFileTreeDrag)
   const chatDragHandle = useDragResize(onChatDrag)
-  const terminalDragHandle = useDragResize(onTerminalDrag, 'y')
 
   const handleFileUpdate = useCallback(({ filename, content }: { filename: string; content: string }) => {
     setActiveFile({ filename, content })
@@ -64,8 +59,20 @@ export function SandboxView({
   }, [])
 
   const handleCommandRun = useCallback(() => {
-    setTerminalOpen(true)
+    setIsCommandRunning(true)
   }, [])
+
+  const handleCommandComplete = useCallback(async () => {
+    setIsCommandRunning(false)
+    try {
+      const res = await fetch(`/api/sandboxes/${sandboxId}/files`)
+      if (!res.ok) return
+      const { files: refreshed } = await res.json() as { files: string[] }
+      setFiles(refreshed)
+    } catch {
+      // Silent failure — file tree will just not update
+    }
+  }, [sandboxId])
 
   const handleSkillsLoaded = useCallback((skills: string[]) => {
     setLoadedSkills(prev => {
@@ -99,6 +106,7 @@ export function SandboxView({
     onFileUpdate: handleFileUpdate,
     onSkillsLoaded: handleSkillsLoaded,
     onCommandRun: handleCommandRun,
+    onCommandComplete: handleCommandComplete,
   })
 
   const hasAutoTriggered = useRef(false)
@@ -197,13 +205,16 @@ export function SandboxView({
           <button
             onClick={() => setTerminalOpen(v => !v)}
             title="Toggle terminal"
-            className={`text-xs px-2 py-1 rounded border font-mono transition ${
+            className={`flex items-center gap-1 text-xs px-2 py-1 rounded border font-mono transition ${
               terminalOpen
                 ? 'bg-stone-800 text-stone-300 border-stone-700'
                 : 'text-stone-400 border-stone-600 hover:text-stone-600 hover:border-stone-300'
             }`}
           >
-            {'>_'}
+            <span>{'>_'}</span>
+            {isCommandRunning && !terminalOpen && (
+              <span className="text-wine animate-pulse text-[10px]">✦</span>
+            )}
           </button>
           <span className="font-display text-xl italic text-wine">Socratize</span>
         </div>
@@ -295,11 +306,7 @@ export function SandboxView({
 
       {/* Bottom: terminal panel */}
       {terminalOpen && (
-        <div style={{ height: terminalHeight }} className="shrink-0 flex flex-col bg-[#1c1917]">
-          <div
-            onMouseDown={terminalDragHandle}
-            className="h-1 shrink-0 bg-stone-700 hover:bg-stone-500 cursor-row-resize transition-colors select-none"
-          />
+        <div style={{ height: 280 }} className="shrink-0 flex flex-col bg-[#1c1917]">
           <div className="flex items-center justify-between px-3 py-1 border-b border-stone-700 shrink-0">
             <span className="text-xs text-stone-400 font-mono">Terminal</span>
             <button
