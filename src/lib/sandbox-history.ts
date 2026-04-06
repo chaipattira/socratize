@@ -13,8 +13,12 @@ export function buildLlmHistory(dbMessages: DbMessage[]): LlmMessage[] {
       result.push({ role: 'user', content: msg.content })
     } else if (msg.role === 'assistant') {
       if (msg.toolHistory) {
-        const delta = JSON.parse(msg.toolHistory) as LlmMessage[]
-        result.push(...delta)
+        try {
+          const delta = JSON.parse(msg.toolHistory) as LlmMessage[]
+          result.push(...delta)
+        } catch {
+          // Corrupted toolHistory row — skip tool turn rather than crashing
+        }
       }
       result.push({ role: 'assistant', content: msg.content })
     }

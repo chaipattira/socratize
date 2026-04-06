@@ -54,4 +54,16 @@ describe('buildLlmHistory', () => {
   it('handles empty message list', () => {
     expect(buildLlmHistory([])).toEqual([])
   })
+
+  it('silently drops messages with unrecognized roles', () => {
+    const msgs = [
+      { role: 'user', content: 'hello', toolHistory: null },
+      { role: 'system', content: 'you are helpful', toolHistory: null },
+      { role: 'assistant', content: 'hi', toolHistory: null },
+    ]
+    expect(buildLlmHistory(msgs)).toEqual([
+      { role: 'user', content: 'hello' },
+      { role: 'assistant', content: 'hi' },
+    ])
+  })
 })
