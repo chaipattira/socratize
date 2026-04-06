@@ -27,13 +27,15 @@ export function useSandboxChat({
   const [streamingText, setStreamingText] = useState('')
   const [streamingToolCalls, setStreamingToolCalls] = useState<Array<{ name: string; input: Record<string, unknown>; done: boolean }>>([])
   const [isStreaming, setIsStreaming] = useState(false)
+  const isStreamingRef = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const [initStatus, setInitStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
   const followUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
 
   const runStream = useCallback(async (userContent: string, isInit: boolean) => {
-    if (isStreaming) return
+    if (isStreamingRef.current) return
+    isStreamingRef.current = true
     setError(null)
     setIsStreaming(true)
 
@@ -60,7 +62,8 @@ export function useSandboxChat({
         throw new Error(err.error ?? 'Failed to send message')
       }
 
-      const reader = response.body!.getReader()
+      if (!response.body) throw new Error('Response body is null')
+      const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
 
@@ -110,13 +113,9 @@ export function useSandboxChat({
 
             // Parse skill names from init response tool calls
             if (isInit) {
-              const listCall = toolCallsList.find(tc => tc.name === 'list_skills')
-              if (listCall) {
-                // Skills will be visible via the tool_result — extract from follow-up read_skill_preview calls
-                const previewCalls = toolCallsList.filter(tc => tc.name === 'read_skill_preview')
-                const skills = previewCalls.map(tc => String(tc.input.filename)).filter(Boolean)
-                if (skills.length > 0) onSkillsLoaded?.(skills)
-              }
+              const previewCalls = toolCallsList.filter(tc => tc.name === 'read_skill_preview')
+              const skills = previewCalls.map(tc => String(tc.input.filename)).filter(Boolean)
+              if (skills.length > 0) onSkillsLoaded?.(skills)
               setInitStatus('done')
             }
           }
@@ -130,9 +129,11 @@ export function useSandboxChat({
       }
       if (isInit) setInitStatus('error')
     } finally {
+      isStreamingRef.current = false
       setIsStreaming(false)
+      if (isInit) setInitStatus(prev => prev === 'loading' ? 'error' : prev)
     }
-  }, [sandboxId, isStreaming, onFileUpdate, onSkillsLoaded])
+  }, [sandboxId, onFileUpdate, onSkillsLoaded])
 
   const triggerInit = useCallback(() => {
     setInitStatus('loading')
