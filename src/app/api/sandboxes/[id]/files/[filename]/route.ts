@@ -34,7 +34,13 @@ export async function PUT(
   const sandbox = await prisma.sandbox.findUnique({ where: { id } })
   if (!sandbox) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { content } = await request.json()
-  writeWorkspaceFile(sandbox.workspaceFolderPath, filename, content ?? '')
+  let content: string
+  try {
+    const body = await request.json()
+    content = body.content ?? ''
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+  writeWorkspaceFile(sandbox.workspaceFolderPath, filename, content)
   return NextResponse.json({ ok: true })
 }

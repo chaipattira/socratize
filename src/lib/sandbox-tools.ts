@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 
-const MAX_FILE_BYTES = 50 * 1024 // 50KB
+export const MAX_FILE_BYTES = 50 * 1024 // 50KB
 
 export function getWorkspacePath(sandboxId: string): string {
   return path.join(process.cwd(), 'data', 'workspaces', sandboxId)
@@ -43,6 +43,12 @@ export function writeWorkspaceFile(workspacePath: string, filename: string, cont
   if (!validateWorkspaceFilename(filename)) throw new Error('Invalid filename')
   fs.mkdirSync(workspacePath, { recursive: true })
   fs.writeFileSync(path.join(workspacePath, filename), content, 'utf-8')
+}
+
+export function writeWorkspaceBuffer(workspacePath: string, filename: string, buffer: Buffer): void {
+  if (!validateWorkspaceFilename(filename)) throw new Error('Invalid filename')
+  fs.mkdirSync(workspacePath, { recursive: true })
+  fs.writeFileSync(path.join(workspacePath, filename), buffer)
 }
 
 export function listSkillsAcrossFolders(folderPaths: string[]): string[] {
