@@ -1,22 +1,39 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateWorkspaceFilename, writeWorkspaceBuffer, writeWorkspaceFile, MAX_FILE_BYTES } from '@/lib/sandbox-tools'
+import { validateWorkspaceFilename, writeWorkspaceBuffer, writeWorkspaceFile } from '@/lib/sandbox-tools'
+import { isBinaryFile } from '@/lib/file-types'
 import fs from 'fs'
 import path from 'path'
 import { spawnSync } from 'child_process'
 import os from 'os'
 
-const MAX_PDF_BYTES = 10 * 1024 * 1024 // 10 MB
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024 // 10 MB
 
-function extractPdfText(pdfBuffer: Buffer): string | null {
-  const tmpFile = path.join(os.tmpdir(), `sandbox-pdf-${Date.now()}.pdf`)
-  const scriptPath = path.join(process.cwd(), 'scripts', 'extract_pdf_text.py')
+interface ExtractionConfig {
+  pkg: string
+  script: string
+}
+
+const EXTRACTION_CONFIG: Record<string, ExtractionConfig> = {
+  '.pdf':  { pkg: 'pypdf',        script: 'extract_pdf_text.py' },
+  '.docx': { pkg: 'python-docx',  script: 'extract_docx_text.py' },
+  '.pptx': { pkg: 'markitdown',   script: 'extract_pptx_text.py' },
+  '.xlsx': { pkg: 'openpyxl',     script: 'extract_xlsx_text.py' },
+}
+
+function extractText(buffer: Buffer, ext: string): string | null {
+  const config = EXTRACTION_CONFIG[ext]
+  if (!config) return null
+
+  const tmpFile = path.join(os.tmpdir(), `sandbox-upload-${Date.now()}${ext}`)
+  const scriptPath = path.join(process.cwd(), 'scripts', config.script)
   try {
-    fs.writeFileSync(tmpFile, pdfBuffer)
-    const result = spawnSync('uvx', ['--with', 'pypdf', 'python', scriptPath, tmpFile], {
-      encoding: 'utf-8',
-      timeout: 30_000,
-    })
+    fs.writeFileSync(tmpFile, buffer)
+    const result = spawnSync(
+      'uvx',
+      ['--with', config.pkg, 'python', scriptPath, tmpFile],
+      { encoding: 'utf-8', timeout: 30_000 }
+    )
     if (result.status !== 0) return null
     return result.stdout || null
   } catch {
@@ -41,23 +58,26 @@ export async function POST(
 
   const written: string[] = []
   for (const file of files) {
-    const isPdf = file.name.toLowerCase().endsWith('.pdf')
+    if (!validateWorkspaceFilename(file.name)) continue
+    if (file.size > MAX_UPLOAD_BYTES) continue
 
-    if (isPdf) {
-      if (file.size > MAX_PDF_BYTES) continue
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const text = extractPdfText(buffer)
-      if (!text) continue
-      const txtName = file.name.replace(/\.pdf$/i, '.txt')
-      if (!validateWorkspaceFilename(txtName)) continue
-      writeWorkspaceFile(sandbox.workspaceFolderPath, txtName, text)
-      written.push(txtName)
-    } else {
-      if (!validateWorkspaceFilename(file.name)) continue
-      if (file.size > MAX_FILE_BYTES) continue
-      const buffer = Buffer.from(await file.arrayBuffer())
-      writeWorkspaceBuffer(sandbox.workspaceFolderPath, file.name, buffer)
-      written.push(file.name)
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase()
+
+    // Always save the original
+    writeWorkspaceBuffer(sandbox.workspaceFolderPath, file.name, buffer)
+    written.push(file.name)
+
+    // For supported binary types, also extract a readable companion
+    if (EXTRACTION_CONFIG[ext]) {
+      const text = extractText(buffer, ext)
+      if (text) {
+        const companionName = `${file.name}.txt`
+        if (validateWorkspaceFilename(companionName)) {
+          writeWorkspaceFile(sandbox.workspaceFolderPath, companionName, text)
+          written.push(companionName)
+        }
+      }
     }
   }
 
