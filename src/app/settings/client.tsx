@@ -43,32 +43,35 @@ export default function SettingsClient() {
     setKeys(prev => prev.filter(k => k.id !== id))
   }
 
+  const inputClass = 'w-full bg-parchment border border-sepia rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-300 focus:outline-none focus:border-stone-400 transition'
+
   return (
-    <div className="min-h-screen bg-gray-950">
-      <header className="border-b border-gray-800 px-6 py-4 flex items-center gap-4">
-        <button onClick={() => router.push('/dashboard')} className="text-gray-500 hover:text-gray-300 text-sm transition">
+    <div className="min-h-screen bg-parchment">
+      <header className="border-b border-sepia px-8 py-4 flex items-center gap-4">
+        <button onClick={() => router.push('/dashboard')} className="text-stone-400 hover:text-stone-700 text-sm transition">
           ← Dashboard
         </button>
-        <span className="text-lg font-semibold">Settings</span>
+        <span className="font-display text-xl italic text-wine">Socratize</span>
       </header>
 
-      <main className="max-w-xl mx-auto px-6 py-10">
+      <main className="max-w-xl mx-auto px-8 py-12">
         {isSetup && (
-          <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-sm text-yellow-300">
+          <div className="mb-8 bg-amber-50 border border-amber-200 rounded px-4 py-3 text-sm text-amber-700">
             No API key found. Please add one below to start using Socratize.
           </div>
         )}
-        <h2 className="text-lg font-semibold mb-2">API Keys</h2>
-        <p className="text-gray-500 text-sm mb-6">
+
+        <h2 className="font-display text-4xl font-normal text-stone-900 mb-2">Settings</h2>
+        <p className="text-stone-400 text-sm mb-10">
           Keys are encrypted at rest. Required to start extraction sessions.
         </p>
 
         {keys.length > 0 && (
-          <div className="mb-6 space-y-2">
+          <div className="mb-8 divide-y divide-sepia border border-sepia rounded overflow-hidden">
             {keys.map(k => (
-              <div key={k.id} className="flex justify-between items-center bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 text-sm">
-                <span className="capitalize">{k.provider} key saved</span>
-                <button onClick={() => handleDelete(k.id)} className="text-gray-600 hover:text-red-400 transition text-xs">
+              <div key={k.id} className="flex justify-between items-center bg-parchment px-4 py-3 text-sm">
+                <span className="capitalize text-stone-700">{k.provider} key saved</span>
+                <button onClick={() => handleDelete(k.id)} className="text-stone-300 hover:text-wine transition text-xs">
                   Remove
                 </button>
               </div>
@@ -76,33 +79,35 @@ export default function SettingsClient() {
           </div>
         )}
 
-        <form onSubmit={handleSave} className="space-y-4 bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <form onSubmit={handleSave} className="space-y-5 bg-vellum border border-sepia rounded p-6">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Provider</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">Provider</label>
             <select
               value={provider}
               onChange={e => setProvider(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+              className={inputClass}
             >
               <option value="anthropic">Anthropic</option>
               <option value="openai">OpenAI</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">API Key</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">API Key</label>
             <input
               type="password"
               value={keyValue}
               onChange={e => setKeyValue(e.target.value)}
               placeholder={provider === 'anthropic' ? 'sk-ant-...' : 'sk-...'}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-gray-500"
+              className={`${inputClass} font-mono`}
             />
           </div>
-          {message && <p className={`text-sm ${message === 'Saved!' ? 'text-green-400' : 'text-red-400'}`}>{message}</p>}
+          {message && (
+            <p className={`text-sm ${message === 'Saved!' ? 'text-wine/70' : 'text-wine'}`}>{message}</p>
+          )}
           <button
             type="submit"
             disabled={saving || !keyValue.trim()}
-            className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-40 text-sm font-medium py-2.5 rounded-lg transition"
+            className="w-full bg-wine hover:bg-wine-hover disabled:opacity-40 text-parchment text-sm font-medium py-2.5 rounded transition"
           >
             {saving ? 'Saving...' : 'Save Key'}
           </button>

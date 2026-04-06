@@ -19,16 +19,16 @@ const mdComponents = {
     </div>
   ),
   thead: ({ children }: { children?: React.ReactNode }) => (
-    <thead className="bg-gray-700">{children}</thead>
+    <thead className="bg-vellum">{children}</thead>
   ),
   th: ({ children }: { children?: React.ReactNode }) => (
-    <th className="px-3 py-1.5 text-left font-semibold text-gray-200 border border-gray-600">{children}</th>
+    <th className="px-3 py-1.5 text-left font-semibold text-stone-700 border border-sepia">{children}</th>
   ),
   td: ({ children }: { children?: React.ReactNode }) => (
-    <td className="px-3 py-1.5 text-gray-300 border border-gray-600">{children}</td>
+    <td className="px-3 py-1.5 text-stone-600 border border-sepia">{children}</td>
   ),
   tr: ({ children }: { children?: React.ReactNode }) => (
-    <tr className="even:bg-gray-750 hover:bg-gray-700/50">{children}</tr>
+    <tr className="even:bg-vellum/50 hover:bg-vellum">{children}</tr>
   ),
 }
 
@@ -55,14 +55,14 @@ function ThinkingBlockView({ text, isStreaming }: { text: string; isStreaming?: 
     <div className="mb-1.5">
       <button
         onClick={() => setExpanded(v => !v)}
-        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-400 transition"
+        className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-600 transition"
       >
-        <span className={isStreaming ? 'animate-pulse' : ''}>✦</span>
-        <span>{isStreaming ? 'Thinking...' : 'Thought for a moment'}</span>
-        <span className="text-gray-600">{expanded ? '▲' : '▼'}</span>
+        <span className={`text-wine/50 ${isStreaming ? 'animate-pulse' : ''}`}>✦</span>
+        <span className="italic">{isStreaming ? 'Thinking...' : 'Thought for a moment'}</span>
+        <span className="text-stone-300">{expanded ? '▲' : '▼'}</span>
       </button>
       {expanded && (
-        <div className="mt-1.5 pl-3 border-l border-gray-700 text-xs text-gray-500 leading-relaxed font-mono whitespace-pre-wrap max-h-64 overflow-y-auto">
+        <div className="mt-1.5 pl-3 border-l border-sepia text-xs text-stone-400 leading-relaxed font-mono whitespace-pre-wrap max-h-64 overflow-y-auto italic">
           {text}
         </div>
       )}
@@ -113,10 +113,11 @@ export function ChatPane({
     markdown(),
     EditorView.lineWrapping,
     EditorView.theme({
-      '&': { minHeight: '42px', maxHeight: '200px' },
+      '&': { minHeight: '42px', maxHeight: '200px', background: '#FAF8F4' },
       '.cm-scroller': { overflow: 'auto' },
-      '.cm-content': { minHeight: '42px', padding: '10px 14px' },
+      '.cm-content': { minHeight: '42px', padding: '10px 14px', color: '#1c1917', caretColor: '#7C2D35' },
       '.cm-line': { padding: '0' },
+      '.cm-focused': { outline: 'none' },
     }),
     keymap.of([
       { key: 'Shift-Enter', run: insertNewlineAndIndent },
@@ -126,16 +127,14 @@ export function ChatPane({
 
   const lastRole = messages.length > 0 ? messages[messages.length - 1].role : null
 
-  const avatarClass = phase === 'building' ? 'bg-amber-600' : 'bg-red-600'
-
   const headerContent = () => {
     if (phase === 'building') return (
       <>
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-        <span className="text-amber-400 font-medium">Building skill</span>
+        <span className="text-amber-700 font-medium">Building skill</span>
       </>
     )
-    return <span>Conversation</span>
+    return <span className="text-stone-400">Conversation</span>
   }
 
   const getPlaceholder = () => {
@@ -147,38 +146,38 @@ export function ChatPane({
   const sendDisabled = isStreaming || !input.trim()
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 py-2 bg-gray-900 border-b border-gray-800 text-xs text-gray-500 flex items-center justify-between gap-2">
+    <div className="flex flex-col h-full bg-parchment">
+      <div className="px-4 py-2 bg-parchment border-b border-sepia text-xs flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {headerContent()}
         </div>
         {supportsThinking(provider, model) && (
           <button
             onClick={onThinkingToggle}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition ${
               thinkingEnabled
-                ? 'bg-purple-900/60 text-purple-300 border border-purple-700'
-                : 'text-gray-500 hover:text-gray-300 border border-gray-700 hover:border-gray-600'
+                ? 'bg-wine/10 text-wine border border-wine/30'
+                : 'text-stone-400 hover:text-stone-600 border border-sepia hover:border-stone-300'
             }`}
           >
-            <span>✦</span>
+            <span className="text-[10px]">✦</span>
             <span>Thinking</span>
-            <span className={thinkingEnabled ? 'text-purple-400' : 'text-gray-600'}>
+            <span className={thinkingEnabled ? 'text-wine/70' : 'text-stone-300'}>
               {thinkingEnabled ? 'ON' : 'OFF'}
             </span>
           </button>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-5 space-y-5">
         {messages.map(msg => (
-          <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-              msg.role === 'assistant' ? avatarClass : 'bg-blue-700'
+          <div key={msg.id} className={`${msg.role === 'user' ? 'flex flex-col items-end' : ''}`}>
+            <div className={`text-[10px] uppercase tracking-widest mb-1 ${
+              msg.role === 'assistant' ? 'text-wine/50' : 'text-stone-300'
             }`}>
-              {msg.role === 'assistant' ? 'S' : 'P'}
+              {msg.role === 'assistant' ? 'Socrates' : 'You'}
             </div>
-            <div className="max-w-[85%] flex flex-col gap-0.5">
+            <div className={`max-w-[88%] flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : ''}`}>
               {msg.role === 'assistant' && msg.thinking && (
                 <ThinkingBlockView text={msg.thinking.text} />
               )}
@@ -189,10 +188,12 @@ export function ChatPane({
                   ))}
                 </div>
               )}
-              <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                msg.role === 'assistant' ? 'bg-gray-800 rounded-tl-sm' : 'bg-gray-700 rounded-tr-sm'
+              <div className={`px-4 py-3 rounded-lg text-sm leading-relaxed ${
+                msg.role === 'assistant'
+                  ? 'bg-vellum border-l-2 border-sepia text-stone-800'
+                  : 'bg-linen text-stone-800'
               }`}>
-                <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
+                <div className="prose prose-sm prose-stone max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents as any}>{msg.content}</ReactMarkdown>
                 </div>
               </div>
@@ -201,11 +202,9 @@ export function ChatPane({
         ))}
 
         {(streamingText || streamingThinking || streamingToolCalls.length > 0) && (
-          <div className="flex gap-3">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarClass}`}>
-              S
-            </div>
-            <div className="max-w-[85%] flex flex-col gap-0.5">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest mb-1 text-wine/50">Socrates</div>
+            <div className="max-w-[88%] flex flex-col gap-1">
               {streamingThinking && (
                 <ThinkingBlockView text={streamingThinking} isStreaming={!streamingText && streamingToolCalls.every(tc => tc.done)} />
               )}
@@ -217,11 +216,11 @@ export function ChatPane({
                 </div>
               )}
               {streamingText && (
-                <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-gray-800 text-sm leading-relaxed">
-                  <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
+                <div className="px-4 py-3 rounded-lg bg-vellum border-l-2 border-sepia text-sm leading-relaxed text-stone-800">
+                  <div className="prose prose-sm prose-stone max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents as any}>{streamingText}</ReactMarkdown>
                   </div>
-                  <span className="inline-block w-1.5 h-4 bg-gray-400 ml-0.5 animate-pulse align-middle" />
+                  <span className="inline-block w-0.5 h-3.5 bg-wine/50 ml-0.5 animate-pulse align-middle" />
                 </div>
               )}
             </div>
@@ -229,7 +228,7 @@ export function ChatPane({
         )}
 
         {error && (
-          <div className="text-red-400 text-sm bg-red-950 border border-red-800 rounded-lg px-4 py-2">
+          <div className="text-wine text-sm bg-wine/5 border border-wine/20 rounded-lg px-4 py-2">
             {error}
           </div>
         )}
@@ -237,37 +236,37 @@ export function ChatPane({
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-3 border-t border-gray-800">
+      <div className="p-3 border-t border-sepia">
         {quotedText && (() => {
           const fileMatch = quotedText.match(/^\[(.+?)\]\n/)
           const quoteFile = fileMatch ? fileMatch[1] : null
           const quoteBody = fileMatch ? quotedText.slice(fileMatch[0].length) : quotedText
           return (
-          <div className="mb-2 flex items-start gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-400">
-            <span className="shrink-0 text-gray-600">›</span>
-            <span className="flex-1 min-w-0">
-              {quoteFile && <span className="font-mono text-gray-500 bg-gray-700 px-1 py-0.5 rounded text-[11px] mr-1.5">{quoteFile}</span>}
-              <span className="line-clamp-1 leading-relaxed">
-                {quoteBody.length > 100 ? `${quoteBody.slice(0, 100)}…` : quoteBody}
+            <div className="mb-2 flex items-start gap-2 px-3 py-2 bg-vellum border border-sepia rounded text-xs text-stone-500">
+              <span className="shrink-0 text-stone-300">›</span>
+              <span className="flex-1 min-w-0">
+                {quoteFile && <span className="font-mono text-stone-400 bg-linen px-1 py-0.5 rounded text-[11px] mr-1.5">{quoteFile}</span>}
+                <span className="line-clamp-1 leading-relaxed italic">
+                  {quoteBody.length > 100 ? `${quoteBody.slice(0, 100)}…` : quoteBody}
+                </span>
               </span>
-            </span>
-            <button
-              onClick={onClearQuote}
-              className="shrink-0 text-gray-600 hover:text-gray-300 transition"
-              aria-label="Clear quote"
-            >
-              ×
-            </button>
-          </div>
+              <button
+                onClick={onClearQuote}
+                className="shrink-0 text-stone-300 hover:text-stone-600 transition"
+                aria-label="Clear quote"
+              >
+                ×
+              </button>
+            </div>
           )
         })()}
         <div className="flex gap-2 items-end">
-          <div className="flex-1 rounded-lg overflow-hidden border border-gray-700 focus-within:border-gray-500 bg-gray-900 text-sm">
+          <div className="flex-1 rounded-lg overflow-hidden border border-sepia focus-within:border-stone-400 bg-parchment text-sm transition">
             <CodeMirror
               value={input}
               onChange={setInput}
               placeholder={getPlaceholder()}
-              theme="dark"
+              theme="light"
               extensions={extensions}
               basicSetup={{
                 lineNumbers: false,
@@ -280,7 +279,7 @@ export function ChatPane({
           <button
             onClick={handleSubmit}
             disabled={sendDisabled}
-            className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shrink-0"
+            className="bg-wine hover:bg-wine-hover disabled:opacity-40 text-parchment px-4 py-2.5 rounded text-sm font-medium transition shrink-0"
           >
             Send
           </button>

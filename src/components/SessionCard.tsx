@@ -37,21 +37,19 @@ export function SessionCard({
   return (
     <div
       onClick={() => router.push(`/sessions/${id}`)}
-      className="bg-gray-900 border border-gray-800 rounded-xl p-5 cursor-pointer hover:border-gray-700 transition group"
+      className="py-4 cursor-pointer hover:bg-vellum -mx-4 px-4 rounded transition group"
     >
-      <div className="flex justify-between items-start">
-        <h3 className="font-medium text-gray-100 group-hover:text-white transition">{title}</h3>
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-gray-600 hover:text-red-400 transition text-xs"
-          >
-            Delete
-          </button>
-        </div>
+      <div className="flex justify-between items-baseline">
+        <h3 className="font-display text-lg font-normal text-stone-900 group-hover:text-wine transition">{title}</h3>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-stone-300 hover:text-wine transition text-xs opacity-0 group-hover:opacity-100"
+        >
+          Delete
+        </button>
       </div>
-      <div className="mt-2 flex items-center gap-3 text-xs text-gray-600">
+      <div className="mt-0.5 flex items-center gap-3 text-xs text-stone-400">
         <span>{messageCount} messages</span>
         <span>·</span>
         <span className="capitalize">{llmProvider}</span>
@@ -60,7 +58,7 @@ export function SessionCard({
         {extractionMode === 'socratize' && (
           <>
             <span>·</span>
-            <span className="text-amber-600">skill</span>
+            <span className="text-wine/60">skill</span>
           </>
         )}
       </div>

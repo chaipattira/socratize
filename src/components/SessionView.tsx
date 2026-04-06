@@ -125,24 +125,24 @@ export function SessionView({
       .replace(/(^-|-$)/g, '') + '.md'
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950">
+    <div className="flex flex-col h-screen bg-parchment">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-5 py-3 bg-gray-900 border-b border-gray-800 shrink-0">
+      <div className="flex items-center justify-between px-6 py-3 bg-parchment border-b border-sepia shrink-0">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push('/dashboard')}
-            className="text-gray-500 hover:text-gray-300 text-sm transition"
+            className="text-stone-400 hover:text-stone-700 text-sm transition"
           >
             ← Dashboard
           </button>
-          <span className="text-sm text-gray-400">{title}</span>
+          <span className="text-sm text-stone-400">{title}</span>
         </div>
-        <span className="text-lg font-bold text-red-500">Socratize</span>
+        <span className="font-display text-xl italic text-wine">Socratize</span>
       </div>
 
       {/* Split pane */}
       <div className="flex flex-1 min-h-0">
-        <div className="flex-1 border-r border-gray-800 min-h-0 min-w-0 overflow-hidden">
+        <div className="flex-1 border-r border-sepia min-h-0 min-w-0 overflow-hidden">
           <EditorPane
             filename={isKbSession ? (activeFile?.filename ?? '') : filename}
             content={isKbSession ? (activeFile?.content ?? '') : markdown}

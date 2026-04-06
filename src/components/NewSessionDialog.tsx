@@ -109,25 +109,27 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
 
   const canSubmit = !!title.trim() && !!folderPath.trim()
 
+  const inputClass = 'w-full bg-parchment border border-sepia rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-300 focus:outline-none focus:border-stone-400 transition'
+
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 overflow-y-auto py-8">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-md mx-4">
-        <h2 className="text-lg font-semibold mb-6">New Session</h2>
+    <div className="fixed inset-0 bg-stone-900/40 flex items-center justify-center z-50 overflow-y-auto py-8">
+      <div className="bg-parchment border border-sepia rounded-xl p-8 w-full max-w-md mx-4 shadow-sm">
+        <h2 className="font-display text-2xl font-normal text-stone-900 mb-6">New Session</h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">What knowledge do you want to capture?</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">What knowledge do you want to capture?</label>
             <input
               autoFocus
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="e.g. How I do code review"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-gray-500"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label className="block text-sm font-medium text-stone-600 mb-2">
               Knowledge base folder path
             </label>
             <div className="flex gap-2">
@@ -136,44 +138,44 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
                 onChange={e => handleFolderPathChange(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddFolder() } }}
                 placeholder="/absolute/path/to/your/notes"
-                className={`flex-1 bg-gray-800 border rounded-lg px-4 py-2.5 text-sm focus:outline-none font-mono transition ${
-                  folderVerified ? 'border-green-700 focus:border-green-500' : 'border-gray-700 focus:border-gray-500'
+                className={`flex-1 bg-parchment border rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-300 focus:outline-none font-mono transition ${
+                  folderVerified ? 'border-wine/40 focus:border-wine/60' : 'border-sepia focus:border-stone-400'
                 }`}
               />
               <button
                 type="button"
                 onClick={handleAddFolder}
                 disabled={!folderPath.trim() || isCheckingFolder}
-                className="px-3 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-gray-300 text-sm rounded-lg transition border border-gray-700 shrink-0"
+                className="px-3 py-2 bg-vellum hover:bg-linen disabled:opacity-40 text-stone-600 text-sm rounded transition border border-sepia shrink-0"
               >
                 {isCheckingFolder ? '...' : 'Add'}
               </button>
             </div>
-            <p className="text-xs text-gray-600 mt-1">Absolute path to a folder of .md files. The folder can be empty.</p>
+            <p className="text-xs text-stone-400 mt-1">Absolute path to a folder of .md files. The folder can be empty.</p>
 
             {folderError && (
-              <p className="text-xs text-red-400 mt-1">{folderError}</p>
+              <p className="text-xs text-wine mt-1">{folderError}</p>
             )}
 
             {folderVerified && (
-              <div className="mt-2 rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700 bg-gray-800">
-                  <span className="text-xs text-gray-400 font-medium">
+              <div className="mt-2 rounded border border-sepia overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-1.5 border-b border-sepia bg-vellum">
+                  <span className="text-xs text-stone-500 font-medium">
                     {folderFiles.length === 0 ? 'Empty folder' : `${folderFiles.length} .md file${folderFiles.length !== 1 ? 's' : ''}`}
                   </span>
-                  <span className="text-xs text-green-500">✓ Found</span>
+                  <span className="text-xs text-wine/60">✓ Found</span>
                 </div>
                 {folderFiles.length > 0 && (
-                  <div className="max-h-40 overflow-y-auto py-1">
+                  <div className="max-h-40 overflow-y-auto py-1 bg-parchment">
                     {folderFiles.map(f => (
-                      <div key={f} className="px-3 py-1 text-xs text-gray-500 font-mono hover:text-gray-400 transition">
+                      <div key={f} className="px-3 py-1 text-xs text-stone-400 font-mono hover:text-stone-600 transition">
                         {f}
                       </div>
                     ))}
                   </div>
                 )}
                 {folderFiles.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-gray-600 italic">
+                  <div className="px-3 py-2 text-xs text-stone-400 italic bg-parchment">
                     No .md files yet — the agent will create them.
                   </div>
                 )}
@@ -182,17 +184,17 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">How do you want to start?</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">How do you want to start?</label>
             <div className="grid grid-cols-3 gap-2">
               {modes.map(mode => (
                 <button
                   key={mode.value}
                   type="button"
                   onClick={() => setExtractionMode(mode.value)}
-                  className={`px-3 py-3 rounded-lg text-sm text-left border transition ${
+                  className={`px-3 py-3 rounded text-sm text-left border transition ${
                     extractionMode === mode.value
-                      ? 'bg-red-600/20 border-red-500 text-red-300'
-                      : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                      ? 'bg-wine/8 border-wine/40 text-wine'
+                      : 'bg-parchment border-sepia text-stone-500 hover:border-stone-400'
                   }`}
                 >
                   <div className="font-medium mb-0.5">{mode.label}</div>
@@ -203,11 +205,11 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">LLM Provider</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">LLM Provider</label>
             <select
               value={provider}
               onChange={e => handleProviderChange(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+              className={inputClass}
             >
               <option value="anthropic">Anthropic (Claude)</option>
               <option value="openai">OpenAI</option>
@@ -215,11 +217,11 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Model</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">Model</label>
             <select
               value={model}
               onChange={e => setModel(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+              className={inputClass}
             >
               {MODELS[provider].map(m => (
                 <option key={m.value} value={m.value}>{m.label}</option>
@@ -227,16 +229,20 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
             </select>
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-wine text-sm">{error}</p>}
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 bg-gray-800 hover:bg-gray-700 text-sm py-2.5 rounded-lg transition">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-vellum hover:bg-linen text-stone-600 text-sm py-2.5 rounded transition border border-sepia"
+            >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !canSubmit}
-              className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-sm py-2.5 rounded-lg font-medium transition"
+              className="flex-1 bg-wine hover:bg-wine-hover disabled:opacity-40 text-parchment text-sm py-2.5 rounded font-medium transition"
             >
               {loading ? 'Starting...' : 'Start Session'}
             </button>

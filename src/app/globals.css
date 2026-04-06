@@ -3,10 +3,55 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html, body {
-  background-color: #030712;
-  color: #f9fafb;
+  background-color: #FAF8F4;
+  color: #1c1917;
+}
+
+/* Warm minimal scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E8DDD0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D5C9BA;
+}
+
+/* CodeMirror light theme overrides */
+.cm-editor {
+  background: #FAF8F4 !important;
+}
+.cm-gutters {
+  background: #F5F1EB !important;
+  border-right: 1px solid #E8DDD0 !important;
+  color: #a8a29e !important;
+}
+.cm-activeLineGutter {
+  background: #EDE7DD !important;
+}
+.cm-activeLine {
+  background: rgba(245, 241, 235, 0.6) !important;
+}
+.cm-cursor {
+  border-left-color: #7C2D35 !important;
+}
+.cm-selectionBackground,
+.cm-focused .cm-selectionBackground {
+  background: #E4DCD1 !important;
+}
+.cm-content {
+  color: #1c1917 !important;
+}
+.cm-placeholder {
+  color: #a8a29e !important;
 }

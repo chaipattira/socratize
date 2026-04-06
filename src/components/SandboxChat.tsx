@@ -18,16 +18,16 @@ const mdComponents = {
     </div>
   ),
   thead: ({ children }: { children?: React.ReactNode }) => (
-    <thead className="bg-gray-700">{children}</thead>
+    <thead className="bg-vellum">{children}</thead>
   ),
   th: ({ children }: { children?: React.ReactNode }) => (
-    <th className="px-3 py-1.5 text-left font-semibold text-gray-200 border border-gray-600">{children}</th>
+    <th className="px-3 py-1.5 text-left font-semibold text-stone-700 border border-sepia">{children}</th>
   ),
   td: ({ children }: { children?: React.ReactNode }) => (
-    <td className="px-3 py-1.5 text-gray-300 border border-gray-600">{children}</td>
+    <td className="px-3 py-1.5 text-stone-600 border border-sepia">{children}</td>
   ),
   tr: ({ children }: { children?: React.ReactNode }) => (
-    <tr className="even:bg-gray-750 hover:bg-gray-700/50">{children}</tr>
+    <tr className="even:bg-vellum/50 hover:bg-vellum">{children}</tr>
   ),
 }
 
@@ -37,14 +37,14 @@ function ThinkingBlockView({ text }: { text: string }) {
     <div className="mb-1.5">
       <button
         onClick={() => setExpanded(v => !v)}
-        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-400 transition"
+        className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-600 transition"
       >
-        <span>✦</span>
-        <span>Thought for a moment</span>
-        <span className="text-gray-600">{expanded ? '▲' : '▼'}</span>
+        <span className="text-wine/50">✦</span>
+        <span className="italic">Thought for a moment</span>
+        <span className="text-stone-300">{expanded ? '▲' : '▼'}</span>
       </button>
       {expanded && (
-        <div className="mt-1.5 pl-3 border-l border-gray-700 text-xs text-gray-500 leading-relaxed font-mono whitespace-pre-wrap max-h-64 overflow-y-auto">
+        <div className="mt-1.5 pl-3 border-l border-sepia text-xs text-stone-400 leading-relaxed font-mono whitespace-pre-wrap max-h-64 overflow-y-auto italic">
           {text}
         </div>
       )}
@@ -116,10 +116,11 @@ export function SandboxChat({
     markdown(),
     EditorView.lineWrapping,
     EditorView.theme({
-      '&': { minHeight: '42px', maxHeight: '200px' },
+      '&': { minHeight: '42px', maxHeight: '200px', background: '#FAF8F4' },
       '.cm-scroller': { overflow: 'auto' },
-      '.cm-content': { minHeight: '42px', padding: '10px 14px' },
+      '.cm-content': { minHeight: '42px', padding: '10px 14px', color: '#1c1917', caretColor: '#7C2D35' },
       '.cm-line': { padding: '0' },
+      '.cm-focused': { outline: 'none' },
     }),
     keymap.of([
       { key: 'Shift-Enter', run: insertNewlineAndIndent },
@@ -130,18 +131,18 @@ export function SandboxChat({
   const skillsSection = useMemo(() => {
     if (initStatus === 'idle') return null
     if (initStatus === 'loading') {
-      return <span className="text-xs text-gray-500 animate-pulse">Loading skills...</span>
+      return <span className="text-xs text-stone-400 italic animate-pulse">Loading skills...</span>
     }
     if (initStatus === 'error') {
       return (
         <span className="flex items-center gap-2">
-          <span className="text-xs text-red-400">Skills not loaded</span>
-          <button onClick={onReInject} className="text-xs text-red-400 underline hover:text-red-300">retry</button>
+          <span className="text-xs text-wine">Skills not loaded</span>
+          <button onClick={onReInject} className="text-xs text-wine underline hover:text-wine-hover">retry</button>
         </span>
       )
     }
     if (loadedSkills.length === 0) {
-      return <span className="text-xs text-gray-600">No skills configured</span>
+      return <span className="text-xs text-stone-400 italic">No skills configured</span>
     }
     return (
       <div className="flex items-center gap-1 flex-wrap">
@@ -153,12 +154,12 @@ export function SandboxChat({
               key={skill}
               onClick={() => onSkillToggle(skill)}
               title={isEnabled ? 'Click to disable this skill' : 'Click to enable this skill'}
-              className={`text-xs px-1.5 py-0.5 rounded font-mono transition ${
+              className={`text-xs px-1.5 py-0.5 rounded font-mono transition border ${
                 !isEnabled
-                  ? 'bg-gray-900 text-gray-600 border border-gray-800 line-through opacity-50'
+                  ? 'bg-vellum text-stone-300 border-sepia line-through opacity-50'
                   : isRecent
-                  ? 'bg-green-900/60 text-green-300 border border-green-700'
-                  : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-500'
+                  ? 'bg-wine/10 text-wine border-wine/20'
+                  : 'bg-vellum text-stone-500 border-sepia hover:border-stone-400'
               }`}
             >
               {skill}
@@ -170,28 +171,28 @@ export function SandboxChat({
   }, [initStatus, loadedSkills, recentSkills, enabledSkills, onSkillToggle, onReInject])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-parchment">
       {/* Header: skills + re-inject + thinking toggle */}
-      <div className="px-4 py-2 bg-gray-900 border-b border-gray-800 flex items-center justify-between gap-2 min-h-[40px]">
+      <div className="px-4 py-2 bg-parchment border-b border-sepia flex items-center justify-between gap-2 min-h-[40px]">
         <div className="flex-1 min-w-0">{skillsSection}</div>
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onThinkingToggle}
             className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition border ${
               thinkingEnabled
-                ? 'bg-purple-900/60 text-purple-300 border-purple-700'
-                : 'text-gray-500 border-gray-700 hover:text-gray-300 hover:border-gray-600'
+                ? 'bg-wine/10 text-wine border-wine/30'
+                : 'text-stone-400 border-sepia hover:text-stone-600 hover:border-stone-300'
             }`}
             title="Toggle extended thinking"
           >
-            <span>✦</span>
+            <span className="text-[10px]">✦</span>
             <span>{thinkingEnabled ? 'ON' : 'OFF'}</span>
           </button>
           {initStatus === 'done' && (
             <button
               onClick={onReInject}
               disabled={isStreaming}
-              className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-40 transition"
+              className="text-xs text-stone-400 hover:text-wine disabled:opacity-40 transition"
               title="Re-inject skills"
             >
               ↺
@@ -201,15 +202,15 @@ export function SandboxChat({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-5 space-y-5">
         {messages.map(msg => (
-          <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-              msg.role === 'assistant' ? 'bg-green-700' : 'bg-blue-700'
+          <div key={msg.id} className={`${msg.role === 'user' ? 'flex flex-col items-end' : ''}`}>
+            <div className={`text-[10px] uppercase tracking-widest mb-1 ${
+              msg.role === 'assistant' ? 'text-wine/50' : 'text-stone-300'
             }`}>
-              {msg.role === 'assistant' ? 'A' : 'P'}
+              {msg.role === 'assistant' ? 'Agent' : 'You'}
             </div>
-            <div className="max-w-[85%] flex flex-col gap-0.5">
+            <div className={`max-w-[88%] flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : ''}`}>
               {msg.role === 'assistant' && msg.thinking && (
                 <ThinkingBlockView text={msg.thinking} />
               )}
@@ -220,14 +221,14 @@ export function SandboxChat({
                   ))}
                 </div>
               )}
-              <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+              <div className={`px-4 py-3 rounded-lg text-sm leading-relaxed ${
                 msg.role === 'assistant'
                   ? msg.isInit
-                    ? 'bg-green-950 border border-green-800 rounded-tl-sm'
-                    : 'bg-gray-800 rounded-tl-sm'
-                  : 'bg-gray-700 rounded-tr-sm'
+                    ? 'bg-wine/5 border-l-2 border-wine/20 text-stone-800'
+                    : 'bg-vellum border-l-2 border-sepia text-stone-800'
+                  : 'bg-linen text-stone-800'
               }`}>
-                <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
+                <div className="prose prose-sm prose-stone max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents as any}>
                     {msg.content}
                   </ReactMarkdown>
@@ -238,9 +239,9 @@ export function SandboxChat({
         ))}
 
         {(streamingText || streamingToolCalls.length > 0) && (
-          <div className="flex gap-3">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-green-700">A</div>
-            <div className="max-w-[85%] flex flex-col gap-0.5">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest mb-1 text-wine/50">Agent</div>
+            <div className="max-w-[88%] flex flex-col gap-1">
               {streamingToolCalls.length > 0 && (
                 <div className="mb-1">
                   {streamingToolCalls.map((tc, i) => (
@@ -249,13 +250,13 @@ export function SandboxChat({
                 </div>
               )}
               {streamingText && (
-                <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-gray-800 text-sm leading-relaxed">
-                  <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
+                <div className="px-4 py-3 rounded-lg bg-vellum border-l-2 border-sepia text-sm leading-relaxed text-stone-800">
+                  <div className="prose prose-sm prose-stone max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents as any}>
                       {streamingText}
                     </ReactMarkdown>
                   </div>
-                  <span className="inline-block w-1.5 h-4 bg-gray-400 ml-0.5 animate-pulse align-middle" />
+                  <span className="inline-block w-0.5 h-3.5 bg-wine/50 ml-0.5 animate-pulse align-middle" />
                 </div>
               )}
             </div>
@@ -263,7 +264,7 @@ export function SandboxChat({
         )}
 
         {error && (
-          <div className="text-red-400 text-sm bg-red-950 border border-red-800 rounded-lg px-4 py-2">
+          <div className="text-wine text-sm bg-wine/5 border border-wine/20 rounded-lg px-4 py-2">
             {error}
           </div>
         )}
@@ -272,23 +273,23 @@ export function SandboxChat({
       </div>
 
       {/* Input */}
-      <div className="p-3 border-t border-gray-800">
+      <div className="p-3 border-t border-sepia">
         {quotedText && (() => {
           const fileMatch = quotedText.match(/^\[(.+?)\]\n/)
           const quoteFile = fileMatch ? fileMatch[1] : null
           const quoteBody = fileMatch ? quotedText.slice(fileMatch[0].length) : quotedText
           return (
-            <div className="mb-2 flex items-start gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-400">
-              <span className="shrink-0 text-gray-600">›</span>
+            <div className="mb-2 flex items-start gap-2 px-3 py-2 bg-vellum border border-sepia rounded text-xs text-stone-500">
+              <span className="shrink-0 text-stone-300">›</span>
               <span className="flex-1 min-w-0">
-                {quoteFile && <span className="font-mono text-gray-500 bg-gray-700 px-1 py-0.5 rounded text-[11px] mr-1.5">{quoteFile}</span>}
-                <span className="line-clamp-1 leading-relaxed">
+                {quoteFile && <span className="font-mono text-stone-400 bg-linen px-1 py-0.5 rounded text-[11px] mr-1.5">{quoteFile}</span>}
+                <span className="line-clamp-1 leading-relaxed italic">
                   {quoteBody.length > 100 ? `${quoteBody.slice(0, 100)}…` : quoteBody}
                 </span>
               </span>
               <button
                 onClick={onClearQuote}
-                className="shrink-0 text-gray-600 hover:text-gray-300 transition"
+                className="shrink-0 text-stone-300 hover:text-stone-600 transition"
                 aria-label="Clear quote"
               >
                 ×
@@ -297,12 +298,12 @@ export function SandboxChat({
           )
         })()}
         <div className="flex gap-2 items-end">
-          <div className="flex-1 rounded-lg overflow-hidden border border-gray-700 focus-within:border-gray-500 bg-gray-900 text-sm">
+          <div className="flex-1 rounded-lg overflow-hidden border border-sepia focus-within:border-stone-400 bg-parchment text-sm transition">
             <CodeMirror
               value={input}
               onChange={setInput}
               placeholder={isStreaming ? 'Waiting for response...' : 'Ask the agent...'}
-              theme="dark"
+              theme="light"
               extensions={extensions}
               basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, indentOnInput: false }}
             />
@@ -310,7 +311,7 @@ export function SandboxChat({
           <button
             onClick={handleSubmit}
             disabled={isStreaming || !input.trim()}
-            className="bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shrink-0"
+            className="bg-wine hover:bg-wine-hover disabled:opacity-40 text-parchment px-4 py-2.5 rounded text-sm font-medium transition shrink-0"
           >
             Send
           </button>

@@ -161,9 +161,9 @@ export function SandboxView({
   ], [])
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950">
+    <div className="flex flex-col h-screen bg-parchment">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-5 py-3 bg-gray-900 border-b border-gray-800 shrink-0">
+      <div className="flex items-center justify-between px-6 py-3 bg-parchment border-b border-sepia shrink-0">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push('/sandbox')}
@@ -185,14 +185,14 @@ export function SandboxView({
           >
             {'>_'}
           </button>
-          <span className="text-lg font-bold text-red-500">Socratize</span>
+          <span className="font-display text-xl italic text-wine">Socratize</span>
         </div>
       </div>
 
       {/* Three-pane IDE */}
       <div className="flex flex-1 min-h-0" style={{ minHeight: terminalOpen ? '0' : undefined }}>
         {/* Left: file tree */}
-        <div className="w-48 shrink-0 border-r border-gray-800 flex flex-col bg-gray-950">
+        <div className="w-48 shrink-0 border-r border-sepia flex flex-col bg-vellum">
           <SandboxFileTree
             sandboxId={sandboxId}
             files={files}
@@ -203,23 +203,23 @@ export function SandboxView({
         </div>
 
         {/* Center: editor */}
-        <div className="flex-1 min-w-0 border-r border-gray-800 flex flex-col min-h-0">
-          <div className="px-4 py-2 bg-gray-900 border-b border-gray-800 text-xs text-gray-500 shrink-0">
-            <span className="font-mono">{activeFile?.filename ?? 'No file open'}</span>
+        <div className="flex-1 min-w-0 border-r border-sepia flex flex-col min-h-0">
+          <div className="px-4 py-2 bg-parchment border-b border-sepia text-xs text-stone-400 font-mono shrink-0">
+            {activeFile?.filename ?? 'No file open'}
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
             {activeFile ? (
               <CodeMirror
                 value={activeFile.content}
                 onChange={handleFileChange}
-                theme="dark"
+                theme="light"
                 height="100%"
                 style={{ height: '100%' }}
                 extensions={selectionExtension}
                 basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-600 text-sm">
+              <div className="flex items-center justify-center h-full text-stone-400 text-sm">
                 Click a file to open it
               </div>
             )}

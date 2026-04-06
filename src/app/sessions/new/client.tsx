@@ -105,25 +105,27 @@ export function NewSessionClient() {
 
   const canSubmit = !!title.trim() && !!folderPath.trim()
 
+  const inputClass = 'w-full bg-parchment border border-sepia rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-300 focus:outline-none focus:border-stone-400 transition'
+
   return (
-    <div className="min-h-screen bg-gray-950">
-      <header className="border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-        <span className="text-xl font-bold text-red-500">Socratize</span>
+    <div className="min-h-screen bg-parchment">
+      <header className="border-b border-sepia px-8 py-4 flex justify-between items-center">
+        <span className="font-display text-xl italic text-wine tracking-wide">Socratize</span>
       </header>
 
-      <main className="max-w-2xl mx-auto px-6 py-10">
+      <main className="max-w-xl mx-auto px-8 py-12">
         <button
           onClick={() => router.push('/')}
-          className="text-sm text-gray-500 hover:text-gray-300 transition mb-6 block"
+          className="text-sm text-stone-400 hover:text-stone-700 transition mb-8 block"
         >
           ← Back
         </button>
 
-        <h1 className="text-2xl font-semibold mb-8">New Session</h1>
+        <h1 className="font-display text-4xl font-normal text-stone-900 mb-10">New Session</h1>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-stone-600 mb-2">
               What knowledge do you want to capture?
             </label>
             <input
@@ -131,12 +133,12 @@ export function NewSessionClient() {
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="e.g. How I do code review"
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-gray-500"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-stone-600 mb-2">
               Knowledge base folder path
             </label>
             <div className="flex gap-2">
@@ -145,44 +147,44 @@ export function NewSessionClient() {
                 onChange={e => handleFolderPathChange(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddFolder() } }}
                 placeholder="/absolute/path/to/your/notes"
-                className={`flex-1 bg-gray-900 border rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none font-mono transition ${
-                  folderVerified ? 'border-green-700 focus:border-green-500' : 'border-gray-700 focus:border-gray-500'
+                className={`flex-1 bg-parchment border rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-300 focus:outline-none transition font-mono ${
+                  folderVerified ? 'border-wine/40 focus:border-wine/60' : 'border-sepia focus:border-stone-400'
                 }`}
               />
               <button
                 type="button"
                 onClick={handleAddFolder}
                 disabled={!folderPath.trim() || isCheckingFolder}
-                className="px-3 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-gray-300 text-sm rounded-lg transition border border-gray-700 shrink-0"
+                className="px-3 py-2 bg-vellum hover:bg-linen disabled:opacity-40 text-stone-600 text-sm rounded transition border border-sepia shrink-0"
               >
                 {isCheckingFolder ? '...' : 'Add'}
               </button>
             </div>
-            <p className="text-xs text-gray-600 mt-1">Absolute path to a folder of .md files. The folder can be empty.</p>
+            <p className="text-xs text-stone-400 mt-1">Absolute path to a folder of .md files. The folder can be empty.</p>
 
             {folderError && (
-              <p className="text-xs text-red-400 mt-1">{folderError}</p>
+              <p className="text-xs text-wine mt-1">{folderError}</p>
             )}
 
             {folderVerified && (
-              <div className="mt-2 rounded-lg border border-gray-700 bg-gray-900 overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700 bg-gray-800">
-                  <span className="text-xs text-gray-400 font-medium">
+              <div className="mt-2 rounded border border-sepia bg-parchment overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-1.5 border-b border-sepia bg-vellum">
+                  <span className="text-xs text-stone-500 font-medium">
                     {folderFiles.length === 0 ? 'Empty folder' : `${folderFiles.length} .md file${folderFiles.length !== 1 ? 's' : ''}`}
                   </span>
-                  <span className="text-xs text-green-500">✓ Found</span>
+                  <span className="text-xs text-wine/60">✓ Found</span>
                 </div>
                 {folderFiles.length > 0 && (
                   <div className="max-h-40 overflow-y-auto py-1">
                     {folderFiles.map(f => (
-                      <div key={f} className="px-3 py-1 text-xs text-gray-500 font-mono hover:text-gray-400 transition">
+                      <div key={f} className="px-3 py-1 text-xs text-stone-400 font-mono hover:text-stone-600 transition">
                         {f}
                       </div>
                     ))}
                   </div>
                 )}
                 {folderFiles.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-gray-600 italic">
+                  <div className="px-3 py-2 text-xs text-stone-400 italic">
                     No .md files yet — the agent will create them.
                   </div>
                 )}
@@ -191,17 +193,17 @@ export function NewSessionClient() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">How do you want to start?</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">How do you want to start?</label>
             <div className="grid grid-cols-3 gap-3">
               {modes.map(mode => (
                 <button
                   key={mode.value}
                   type="button"
                   onClick={() => setExtractionMode(mode.value)}
-                  className={`px-4 py-4 rounded-lg text-sm text-left border transition ${
+                  className={`px-4 py-4 rounded text-sm text-left border transition ${
                     extractionMode === mode.value
-                      ? 'bg-red-600/20 border-red-500 text-red-300'
-                      : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-600'
+                      ? 'bg-wine/8 border-wine/40 text-wine'
+                      : 'bg-parchment border-sepia text-stone-500 hover:border-stone-400'
                   }`}
                 >
                   <div className="font-medium mb-1">{mode.label}</div>
@@ -212,11 +214,11 @@ export function NewSessionClient() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">LLM Provider</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">LLM Provider</label>
             <select
               value={provider}
               onChange={e => handleProviderChange(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 focus:outline-none"
+              className={inputClass}
             >
               <option value="anthropic">Anthropic (Claude)</option>
               <option value="openai">OpenAI</option>
@@ -224,11 +226,11 @@ export function NewSessionClient() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Model</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">Model</label>
             <select
               value={model}
               onChange={e => setModel(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 focus:outline-none"
+              className={inputClass}
             >
               {MODELS[provider].map(m => (
                 <option key={m.value} value={m.value}>{m.label}</option>
@@ -237,7 +239,7 @@ export function NewSessionClient() {
           </div>
 
           {error && (
-            <div className="text-red-400 text-sm bg-red-950 border border-red-800 rounded-lg px-4 py-2">
+            <div className="text-wine text-sm bg-wine/5 border border-wine/20 rounded px-4 py-2">
               {error}
             </div>
           )}
@@ -245,7 +247,7 @@ export function NewSessionClient() {
           <button
             type="submit"
             disabled={loading || !canSubmit}
-            className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-medium py-3 rounded-lg transition"
+            className="w-full bg-wine hover:bg-wine-hover disabled:opacity-40 text-parchment font-medium py-3 rounded transition"
           >
             {loading ? 'Starting...' : 'Start Session →'}
           </button>

@@ -25,40 +25,40 @@ export function SandboxDashboardClient({ initialSandboxes }: SandboxDashboardCli
   }
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      <header className="border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-        <span className="text-xl font-bold text-red-500">Socratize</span>
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-sm text-gray-400 hover:text-gray-200 transition">
+    <div className="min-h-screen bg-parchment">
+      <header className="border-b border-sepia px-8 py-4 flex justify-between items-center">
+        <span className="font-display text-xl italic text-wine tracking-wide">Socratize</span>
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard" className="text-sm text-stone-500 hover:text-stone-800 transition">
             Sessions
           </Link>
-          <Link href="/settings" className="text-sm text-gray-400 hover:text-gray-200 transition">
+          <Link href="/settings" className="text-sm text-stone-500 hover:text-stone-800 transition">
             Settings
           </Link>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-10">
-        <div className="flex justify-between items-center mb-8">
+      <main className="max-w-2xl mx-auto px-8 py-12">
+        <div className="flex justify-between items-baseline mb-10">
           <div>
-            <h1 className="text-2xl font-semibold">Sandbox</h1>
-            <p className="text-gray-500 text-sm mt-1">AI agent workspaces with your skills</p>
+            <h1 className="font-display text-4xl font-normal text-stone-900">Sandbox</h1>
+            <p className="text-stone-400 text-sm mt-1">AI agent workspaces with your skills</p>
           </div>
           <button
             onClick={() => router.push('/sandbox/new')}
-            className="bg-green-700 hover:bg-green-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition"
+            className="bg-wine hover:bg-wine-hover text-parchment text-sm font-medium px-5 py-2 rounded transition"
           >
-            + New Sandbox
+            New Sandbox
           </button>
         </div>
 
         {sandboxes.length === 0 ? (
-          <div className="text-center py-20 text-gray-600">
-            <p className="text-lg mb-2">No sandboxes yet</p>
-            <p className="text-sm">Create one to start working with your AI agent</p>
+          <div className="text-center py-24">
+            <p className="font-display text-2xl text-stone-300 italic">No sandboxes yet</p>
+            <p className="text-stone-400 text-sm mt-2">Create one to start working with your AI agent</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-sepia">
             {sandboxes.map(s => {
               let skillPaths: string[] = []
               try { skillPaths = JSON.parse(s.skillFolderPaths || '[]') } catch { /* malformed — treat as empty */ }
@@ -66,20 +66,20 @@ export function SandboxDashboardClient({ initialSandboxes }: SandboxDashboardCli
               return (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between p-4 bg-gray-900 border border-gray-800 rounded-xl hover:border-gray-700 transition"
+                  className="py-4 hover:bg-vellum -mx-4 px-4 rounded transition group flex items-center justify-between"
                 >
                   <button
                     onClick={() => router.push(`/sandbox/${s.id}`)}
                     className="flex-1 text-left"
                   >
-                    <div className="font-medium text-gray-100">{s.name}</div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="font-display text-lg font-normal text-stone-900 group-hover:text-wine transition">{s.name}</div>
+                    <div className="text-xs text-stone-400 mt-0.5">
                       {skillCount} skill folder{skillCount !== 1 ? 's' : ''} · Updated {new Date(s.updatedAt).toLocaleDateString()}
                     </div>
                   </button>
                   <button
                     onClick={() => handleDelete(s.id)}
-                    className="text-gray-600 hover:text-red-400 transition text-sm ml-4"
+                    className="text-stone-300 hover:text-wine transition text-xs ml-4 opacity-0 group-hover:opacity-100"
                   >
                     Delete
                   </button>

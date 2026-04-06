@@ -50,12 +50,12 @@ export function SandboxFileTree({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-800 font-medium uppercase tracking-wide shrink-0">
+      <div className="px-3 py-2 text-xs text-stone-500 border-b border-sepia font-medium uppercase tracking-wide shrink-0">
         Workspace
       </div>
       <div className="flex-1 overflow-y-auto py-1">
         {files.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-gray-600 italic">No files yet</p>
+          <p className="px-3 py-2 text-xs text-stone-400 italic">No files yet</p>
         ) : (
           files.map(f => (
             <button
@@ -63,8 +63,8 @@ export function SandboxFileTree({
               onClick={() => onFileClick(f)}
               className={`w-full text-left px-3 py-1.5 text-xs font-mono truncate transition ${
                 f === activeFilename
-                  ? 'bg-gray-800 text-gray-100'
-                  : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'
+                  ? 'bg-linen text-stone-900'
+                  : 'text-stone-500 hover:bg-linen hover:text-stone-800'
               }`}
             >
               {f}
@@ -72,9 +72,9 @@ export function SandboxFileTree({
           ))
         )}
       </div>
-      <div className="px-3 py-2 border-t border-gray-800 shrink-0">
+      <div className="px-3 py-2 border-t border-sepia shrink-0">
         <label
-          className={`text-xs text-gray-500 hover:text-gray-300 transition w-full text-left block cursor-pointer ${isUploading ? 'opacity-40 pointer-events-none' : ''}`}
+          className={`text-xs text-stone-400 hover:text-wine transition w-full text-left block cursor-pointer ${isUploading ? 'opacity-40 pointer-events-none' : ''}`}
         >
           {isUploading ? 'Uploading...' : '+ Upload file'}
           <input
@@ -86,7 +86,7 @@ export function SandboxFileTree({
           />
         </label>
         {uploadError && (
-          <p className="text-xs text-red-400 mt-1">{uploadError}</p>
+          <p className="text-xs text-wine mt-1">{uploadError}</p>
         )}
       </div>
     </div>
