@@ -71,10 +71,16 @@ export function NewSandboxClient({ skillFolders }: NewSandboxClientProps) {
       for (const file of uploadedFiles) {
         formData.append('files', file)
       }
-      await fetch(`/api/sandboxes/${sandbox.id}/upload`, {
+      const uploadRes = await fetch(`/api/sandboxes/${sandbox.id}/upload`, {
         method: 'POST',
         body: formData,
       })
+      if (!uploadRes.ok) {
+        setError('Sandbox created but file upload failed. You can upload files from the workspace.')
+        setIsCreating(false)
+        router.push(`/sandbox/${sandbox.id}`)
+        return
+      }
     }
 
     router.push(`/sandbox/${sandbox.id}`)

@@ -60,7 +60,8 @@ export function SandboxDashboardClient({ initialSandboxes }: SandboxDashboardCli
         ) : (
           <div className="space-y-3">
             {sandboxes.map(s => {
-              const skillPaths: string[] = JSON.parse(s.skillFolderPaths || '[]')
+              let skillPaths: string[] = []
+              try { skillPaths = JSON.parse(s.skillFolderPaths || '[]') } catch { /* malformed — treat as empty */ }
               const skillCount = skillPaths.length
               return (
                 <div

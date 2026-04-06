@@ -16,7 +16,7 @@ export default async function SandboxIdePage({
       messages: { orderBy: { createdAt: 'asc' } },
     },
   })
-  if (!sandbox) notFound()
+  if (!sandbox) return notFound()
 
   const initialMessages = sandbox.messages.map(m => ({
     id: m.id,
@@ -24,7 +24,7 @@ export default async function SandboxIdePage({
     content: m.content,
   }))
 
-  const workspaceExists = sandbox.workspaceFolderPath &&
+  const workspaceExists = sandbox.workspaceFolderPath !== '' &&
     fs.existsSync(sandbox.workspaceFolderPath)
   const initialFiles = workspaceExists
     ? listWorkspaceFiles(sandbox.workspaceFolderPath)
