@@ -36,7 +36,6 @@ export function useSandboxChat({
   const [error, setError] = useState<string | null>(null)
   const [initStatus, setInitStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
-  const followUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
   const abortRef = useRef<AbortController | null>(null)
 
   const stopStreaming = useCallback(() => {
@@ -59,7 +58,6 @@ export function useSandboxChat({
     if (!isInit) {
       const userMsg: SandboxMessage = { id: crypto.randomUUID(), role: 'user', content: userContent }
       setMessages(prev => [...prev, userMsg])
-      followUps.current.push({ role: 'user', content: userContent })
     }
 
     let assistantText = ''
@@ -76,7 +74,6 @@ export function useSandboxChat({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userContent,
-          followUps: followUps.current,
           thinkingEnabled: opts.thinkingEnabled ?? false,
           enabledSkills: opts.enabledSkills ?? null,
         }),
@@ -139,10 +136,6 @@ export function useSandboxChat({
             setStreamingText('')
             setStreamingToolCalls([])
 
-            if (!isInit) {
-              followUps.current.push({ role: 'assistant', content: assistantText })
-            }
-
             // Parse skill names from init response tool calls
             if (isInit) {
               const previewCalls = toolCallsList.filter(tc => tc.name === 'read_skill_preview')
@@ -157,7 +150,6 @@ export function useSandboxChat({
       wasAborted = err instanceof DOMException && err.name === 'AbortError'
       if (!isInit) {
         setMessages(prev => prev.slice(0, -1))
-        followUps.current = followUps.current.slice(0, -1)
       }
       if (!wasAborted) {
         setError(String(err))

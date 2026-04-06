@@ -4,6 +4,7 @@ import OpenAI from 'openai'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
 import { buildSandboxSystemPrompt, SANDBOX_TOOLS_ANTHROPIC, SANDBOX_TOOLS_OPENAI } from '@/lib/sandbox-prompt'
+import { buildLlmHistory } from '@/lib/sandbox-history'
 import {
   listSkillsAcrossFolders,
   readSkillFile,
@@ -216,7 +217,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { message, followUps = [], thinkingEnabled = false, enabledSkills = null } = await request.json()
+  const { message, thinkingEnabled = false, enabledSkills = null } = await request.json()
 
   if (!message || typeof message !== 'string') {
     return NextResponse.json({ error: 'message is required' }, { status: 400 })
@@ -242,12 +243,6 @@ export async function POST(
   const skillFolderPaths: string[] = JSON.parse(sandbox.skillFolderPaths || '[]')
   const systemPrompt = buildSandboxSystemPrompt()
 
-  // Build message history: persisted messages + any in-memory followUps
-  const history: { role: 'user' | 'assistant'; content: string }[] = [
-    ...sandbox.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-    ...followUps,
-  ]
-
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
     async start(controller) {
@@ -260,7 +255,7 @@ export async function POST(
 
         // Build LLM messages from history + current
         const llmMessages = [
-          ...history,
+          ...buildLlmHistory(sandbox.messages),
           { role: 'user' as const, content: currentMessage },
         ]
 
