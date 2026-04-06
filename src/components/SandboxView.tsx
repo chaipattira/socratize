@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { EditorView } from '@codemirror/view'
+import { isBinaryFile } from '@/lib/file-types'
 import { useSandboxChat, type SandboxMessage } from '@/hooks/useSandboxChat'
 import { SandboxFileTree } from './SandboxFileTree'
 import { SandboxChat } from './SandboxChat'
@@ -209,15 +210,31 @@ export function SandboxView({
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
             {activeFile ? (
-              <CodeMirror
-                value={activeFile.content}
-                onChange={handleFileChange}
-                theme="light"
-                height="100%"
-                style={{ height: '100%' }}
-                extensions={selectionExtension}
-                basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }}
-              />
+              isBinaryFile(activeFile.filename) ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+                  <p className="text-sm text-stone-400 font-medium">Preview not available</p>
+                  {activeFile.filename.match(/\.(pdf|docx|pptx|xlsx)$/i) ? (
+                    <p className="text-xs text-stone-300 mt-1">
+                      Readable content extracted to{' '}
+                      <span className="font-mono">{activeFile.filename}.txt</span>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-stone-300 mt-1">
+                      Ask the agent to load this file using R (haven::read_sas)
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <CodeMirror
+                  value={activeFile.content}
+                  onChange={handleFileChange}
+                  theme="light"
+                  height="100%"
+                  style={{ height: '100%' }}
+                  extensions={selectionExtension}
+                  basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }}
+                />
+              )
             ) : (
               <div className="flex items-center justify-center h-full text-stone-400 text-sm">
                 Click a file to open it
