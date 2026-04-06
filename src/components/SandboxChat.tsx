@@ -317,6 +317,7 @@ export function SandboxChat({
             <button
               onClick={onStop}
               title="Stop"
+              aria-label="Stop streaming"
               className="bg-stone-700 hover:bg-stone-800 text-parchment px-3 py-2.5 rounded text-sm font-medium transition shrink-0"
             >
               ■

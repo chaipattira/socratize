@@ -155,12 +155,12 @@ export function useSandboxChat({
       }
     } catch (err) {
       wasAborted = err instanceof DOMException && err.name === 'AbortError'
+      if (!isInit) {
+        setMessages(prev => prev.slice(0, -1))
+        followUps.current = followUps.current.slice(0, -1)
+      }
       if (!wasAborted) {
         setError(String(err))
-        if (!isInit) {
-          setMessages(prev => prev.slice(0, -1))
-          followUps.current = followUps.current.slice(0, -1)
-        }
         if (isInit) setInitStatus('error')
       }
     } finally {
