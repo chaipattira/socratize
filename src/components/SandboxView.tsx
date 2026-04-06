@@ -6,6 +6,7 @@ import { EditorView } from '@codemirror/view'
 import { useSandboxChat, type SandboxMessage } from '@/hooks/useSandboxChat'
 import { SandboxFileTree } from './SandboxFileTree'
 import { SandboxChat } from './SandboxChat'
+import { SandboxTerminal } from './SandboxTerminal'
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
 
@@ -35,10 +36,15 @@ export function SandboxView({
 
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
   const [activeQuote, setActiveQuote] = useState('')
+  const [terminalOpen, setTerminalOpen] = useState(false)
 
   const handleFileUpdate = useCallback(({ filename, content }: { filename: string; content: string }) => {
     setActiveFile({ filename, content })
     setFiles(prev => prev.includes(filename) ? prev : [...prev, filename].sort())
+  }, [])
+
+  const handleCommandRun = useCallback(() => {
+    setTerminalOpen(true)
   }, [])
 
   const handleSkillsLoaded = useCallback((skills: string[]) => {
@@ -72,6 +78,7 @@ export function SandboxView({
     initialMessages,
     onFileUpdate: handleFileUpdate,
     onSkillsLoaded: handleSkillsLoaded,
+    onCommandRun: handleCommandRun,
   })
 
   const hasAutoTriggered = useRef(false)
@@ -160,17 +167,30 @@ export function SandboxView({
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push('/sandbox')}
-            className="text-gray-500 hover:text-gray-300 text-sm transition"
+            className="text-stone-400 hover:text-stone-700 text-sm transition"
           >
             ← Sandbox
           </button>
-          <span className="text-sm text-gray-400">{name}</span>
+          <span className="text-sm text-stone-400">{name}</span>
         </div>
-        <span className="text-lg font-bold text-red-500">Socratize</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setTerminalOpen(v => !v)}
+            title="Toggle terminal"
+            className={`text-xs px-2 py-1 rounded border font-mono transition ${
+              terminalOpen
+                ? 'bg-stone-800 text-stone-300 border-stone-700'
+                : 'text-stone-400 border-stone-600 hover:text-stone-600 hover:border-stone-300'
+            }`}
+          >
+            {'>_'}
+          </button>
+          <span className="text-lg font-bold text-red-500">Socratize</span>
+        </div>
       </div>
 
       {/* Three-pane IDE */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0" style={{ minHeight: terminalOpen ? '0' : undefined }}>
         {/* Left: file tree */}
         <div className="w-48 shrink-0 border-r border-gray-800 flex flex-col bg-gray-950">
           <SandboxFileTree
@@ -228,6 +248,25 @@ export function SandboxView({
           />
         </div>
       </div>
+
+      {/* Bottom: terminal panel */}
+      {terminalOpen && (
+        <div className="h-[30vh] shrink-0 border-t border-stone-700 flex flex-col bg-[#1c1917]">
+          <div className="flex items-center justify-between px-3 py-1 border-b border-stone-700 shrink-0">
+            <span className="text-xs text-stone-400 font-mono">Terminal</span>
+            <button
+              onClick={() => setTerminalOpen(false)}
+              className="text-stone-500 hover:text-stone-300 text-xs transition leading-none"
+              aria-label="Close terminal"
+            >
+              ×
+            </button>
+          </div>
+          <div className="flex-1 min-h-0">
+            <SandboxTerminal sandboxId={sandboxId} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
