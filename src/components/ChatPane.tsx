@@ -2,6 +2,7 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView, keymap } from '@codemirror/view'
 import { insertNewlineAndIndent } from '@codemirror/commands'
@@ -11,6 +12,26 @@ import { ToolCallRow } from './ToolCallRow'
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
 
+const mdComponents = {
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div className="overflow-x-auto my-2">
+      <table className="w-full text-xs border-collapse">{children}</table>
+    </div>
+  ),
+  thead: ({ children }: { children?: React.ReactNode }) => (
+    <thead className="bg-gray-700">{children}</thead>
+  ),
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th className="px-3 py-1.5 text-left font-semibold text-gray-200 border border-gray-600">{children}</th>
+  ),
+  td: ({ children }: { children?: React.ReactNode }) => (
+    <td className="px-3 py-1.5 text-gray-300 border border-gray-600">{children}</td>
+  ),
+  tr: ({ children }: { children?: React.ReactNode }) => (
+    <tr className="even:bg-gray-750 hover:bg-gray-700/50">{children}</tr>
+  ),
+}
+
 interface ChatPaneProps {
   messages: ChatMessage[]
   streamingText: string
@@ -18,13 +39,12 @@ interface ChatPaneProps {
   streamingToolCalls: ToolCallItem[]
   isStreaming: boolean
   error: string | null
-  phase: 'building' | 'testing' | null
+  phase: 'building' | null
   onSend: (message: string) => void
   provider: string
   model: string
   thinkingEnabled: boolean
   onThinkingToggle: () => void
-  selectedSkillFile?: string
   quotedText?: string
   onClearQuote?: () => void
 }
@@ -64,7 +84,6 @@ export function ChatPane({
   model,
   thinkingEnabled,
   onThinkingToggle,
-  selectedSkillFile,
   quotedText,
   onClearQuote,
 }: ChatPaneProps) {
@@ -78,14 +97,13 @@ export function ChatPane({
 
   const handleSubmit = useCallback(() => {
     if (!input.trim() || isStreaming) return
-    if (phase === 'testing' && !selectedSkillFile) return
     const body = quotedText
       ? `> ${quotedText.trim().split('\n').join('\n> ')}\n\n${input.trim()}`
       : input.trim()
     onSend(body)
     setInput('')
     onClearQuote?.()
-  }, [input, isStreaming, phase, selectedSkillFile, onSend, quotedText, onClearQuote])
+  }, [input, isStreaming, onSend, quotedText, onClearQuote])
 
   useEffect(() => {
     submitRef.current = handleSubmit
@@ -108,10 +126,7 @@ export function ChatPane({
 
   const lastRole = messages.length > 0 ? messages[messages.length - 1].role : null
 
-  const avatarClass =
-    phase === 'building' ? 'bg-amber-600' :
-    phase === 'testing' ? 'bg-blue-600' :
-    'bg-red-600'
+  const avatarClass = phase === 'building' ? 'bg-amber-600' : 'bg-red-600'
 
   const headerContent = () => {
     if (phase === 'building') return (
@@ -120,28 +135,16 @@ export function ChatPane({
         <span className="text-amber-400 font-medium">Building skill</span>
       </>
     )
-    if (phase === 'testing') return (
-      <>
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-        <span className="text-blue-400 font-medium">
-          {selectedSkillFile ? `Testing: ${selectedSkillFile}` : 'Select a skill from the sidebar'}
-        </span>
-      </>
-    )
     return <span>Conversation</span>
   }
 
   const getPlaceholder = () => {
     if (isStreaming) return 'Waiting for response...'
-    if (phase === 'testing' && !selectedSkillFile) return 'Select a skill file from the sidebar first...'
     if (phase === 'building') return 'Answer the question above...'
-    if (phase === 'testing') return lastRole === 'assistant'
-      ? 'Give your feedback...'
-      : 'Send a test prompt as an end user would...'
     return 'Share your expertise...'
   }
 
-  const sendDisabled = isStreaming || !input.trim() || (phase === 'testing' && !selectedSkillFile)
+  const sendDisabled = isStreaming || !input.trim()
 
   return (
     <div className="flex flex-col h-full">
@@ -189,8 +192,8 @@ export function ChatPane({
               <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                 msg.role === 'assistant' ? 'bg-gray-800 rounded-tl-sm' : 'bg-gray-700 rounded-tr-sm'
               }`}>
-                <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents as any}>{msg.content}</ReactMarkdown>
                 </div>
               </div>
             </div>
@@ -215,8 +218,8 @@ export function ChatPane({
               )}
               {streamingText && (
                 <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-gray-800 text-sm leading-relaxed">
-                  <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed">
-                    <ReactMarkdown>{streamingText}</ReactMarkdown>
+                  <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-p:leading-relaxed prose-table:w-full">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents as any}>{streamingText}</ReactMarkdown>
                   </div>
                   <span className="inline-block w-1.5 h-4 bg-gray-400 ml-0.5 animate-pulse align-middle" />
                 </div>
@@ -235,11 +238,18 @@ export function ChatPane({
       </div>
 
       <div className="p-3 border-t border-gray-800">
-        {quotedText && (
+        {quotedText && (() => {
+          const fileMatch = quotedText.match(/^\[(.+?)\]\n/)
+          const quoteFile = fileMatch ? fileMatch[1] : null
+          const quoteBody = fileMatch ? quotedText.slice(fileMatch[0].length) : quotedText
+          return (
           <div className="mb-2 flex items-start gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-400">
             <span className="shrink-0 text-gray-600">›</span>
-            <span className="flex-1 line-clamp-2 leading-relaxed">
-              {quotedText.length > 120 ? `${quotedText.slice(0, 120)}…` : quotedText}
+            <span className="flex-1 min-w-0">
+              {quoteFile && <span className="font-mono text-gray-500 bg-gray-700 px-1 py-0.5 rounded text-[11px] mr-1.5">{quoteFile}</span>}
+              <span className="line-clamp-1 leading-relaxed">
+                {quoteBody.length > 100 ? `${quoteBody.slice(0, 100)}…` : quoteBody}
+              </span>
             </span>
             <button
               onClick={onClearQuote}
@@ -249,7 +259,8 @@ export function ChatPane({
               ×
             </button>
           </div>
-        )}
+          )
+        })()}
         <div className="flex gap-2 items-end">
           <div className="flex-1 rounded-lg overflow-hidden border border-gray-700 focus-within:border-gray-500 bg-gray-900 text-sm">
             <CodeMirror

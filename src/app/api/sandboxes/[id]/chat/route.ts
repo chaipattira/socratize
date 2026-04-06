@@ -17,11 +17,19 @@ function executeSandboxTool(
   name: string,
   input: Record<string, unknown>,
   skillFolderPaths: string[],
-  workspacePath: string
+  workspacePath: string,
+  enabledSkills: string[] | null
 ): { result: string; fileUpdate?: { filename: string; content: string } } {
   if (name === 'list_skills') {
     const skills = listSkillsAcrossFolders(skillFolderPaths)
-    return { result: skills.length > 0 ? skills.join('\n') : '(no skill files configured)' }
+    const filtered = enabledSkills ? skills.filter(s => enabledSkills.includes(s)) : skills
+    return { result: filtered.length > 0 ? filtered.join('\n') : '(no skill files configured)' }
+  }
+  if (name === 'read_skill_preview' || name === 'read_skill') {
+    const filename = input.filename as string
+    if (enabledSkills && !enabledSkills.includes(filename)) {
+      return { result: `Skill "${filename}" is currently disabled.` }
+    }
   }
   if (name === 'read_skill_preview') {
     const filename = input.filename as string
@@ -63,6 +71,8 @@ async function runAnthropicLoop(
   messages: Anthropic.MessageParam[],
   skillFolderPaths: string[],
   workspacePath: string,
+  enabledSkills: string[] | null,
+  thinkingEnabled: boolean,
   send: (data: object) => void
 ): Promise<string> {
   const loopMessages: Anthropic.MessageParam[] = [...messages]
@@ -71,19 +81,29 @@ async function runAnthropicLoop(
 
   while (true) {
     if (++iterations > 20) throw new Error('Agent loop exceeded maximum iterations')
-    const response = await anthropic.messages.create({
+
+    const createParams: Parameters<typeof anthropic.messages.create>[0] = {
       model,
-      max_tokens: 4096,
+      max_tokens: thinkingEnabled ? 16000 : 4096,
       system: systemPrompt,
       tools: SANDBOX_TOOLS_ANTHROPIC as any,
       messages: loopMessages,
-    })
+    }
+    if (thinkingEnabled) {
+      (createParams as any).thinking = { type: 'enabled', budget_tokens: 10000 }
+      ;(createParams as any).betas = ['interleaved-thinking-2025-05-14']
+    }
+
+    const response = await anthropic.messages.create(createParams)
 
     let turnText = ''
+    let turnThinking = ''
     const toolUseBlocks: Array<{ id: string; name: string; input: Record<string, unknown> }> = []
 
     for (const block of response.content) {
-      if (block.type === 'text') {
+      if (block.type === 'thinking') {
+        turnThinking += (block as any).thinking ?? ''
+      } else if (block.type === 'text') {
         turnText += block.text
       } else if (block.type === 'tool_use') {
         toolUseBlocks.push({ id: block.id, name: block.name, input: block.input as Record<string, unknown> })
@@ -96,7 +116,7 @@ async function runAnthropicLoop(
       for (const toolUse of toolUseBlocks) {
         send({ type: 'tool_call', name: toolUse.name, input: toolUse.input })
         const { result, fileUpdate } = executeSandboxTool(
-          toolUse.name, toolUse.input, skillFolderPaths, workspacePath
+          toolUse.name, toolUse.input, skillFolderPaths, workspacePath, enabledSkills
         )
         if (fileUpdate) {
           send({ type: 'file_update', filename: fileUpdate.filename, content: fileUpdate.content })
@@ -109,6 +129,7 @@ async function runAnthropicLoop(
       loopMessages.push({ role: 'user', content: toolResults })
     } else {
       fullText = turnText
+      if (turnThinking) send({ type: 'thinking', delta: turnThinking })
       send({ type: 'text', delta: fullText })
       break
     }
@@ -124,6 +145,7 @@ async function runOpenAILoop(
   messages: OpenAI.Chat.ChatCompletionMessageParam[],
   skillFolderPaths: string[],
   workspacePath: string,
+  enabledSkills: string[] | null,
   send: (data: object) => void
 ): Promise<string> {
   type OAIMsg = OpenAI.Chat.ChatCompletionMessageParam
@@ -151,7 +173,7 @@ async function runOpenAILoop(
         const name = toolCall.function.name
         const input = JSON.parse(toolCall.function.arguments) as Record<string, unknown>
         send({ type: 'tool_call', name, input })
-        const { result, fileUpdate } = executeSandboxTool(name, input, skillFolderPaths, workspacePath)
+        const { result, fileUpdate } = executeSandboxTool(name, input, skillFolderPaths, workspacePath, enabledSkills)
         if (fileUpdate) {
           send({ type: 'file_update', filename: fileUpdate.filename, content: fileUpdate.content })
         }
@@ -176,7 +198,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { message, followUps = [] } = await request.json()
+  const { message, followUps = [], thinkingEnabled = false, enabledSkills = null } = await request.json()
 
   if (!message || typeof message !== 'string') {
     return NextResponse.json({ error: 'message is required' }, { status: 400 })
@@ -232,14 +254,19 @@ export async function POST(
           assistantText = await runAnthropicLoop(
             anthropic, model, systemPrompt,
             llmMessages as Anthropic.MessageParam[],
-            skillFolderPaths, sandbox.workspaceFolderPath, send
+            skillFolderPaths, sandbox.workspaceFolderPath,
+            enabledSkills as string[] | null,
+            thinkingEnabled as boolean,
+            send
           )
         } else {
           const openai = new OpenAI({ apiKey: decryptedKey })
           assistantText = await runOpenAILoop(
             openai, model, systemPrompt,
             llmMessages as OpenAI.Chat.ChatCompletionMessageParam[],
-            skillFolderPaths, sandbox.workspaceFolderPath, send
+            skillFolderPaths, sandbox.workspaceFolderPath,
+            enabledSkills as string[] | null,
+            send
           )
         }
 

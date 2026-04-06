@@ -1,7 +1,8 @@
 'use client'
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { EditorView } from '@codemirror/view'
 import { useSandboxChat, type SandboxMessage } from '@/hooks/useSandboxChat'
 import { SandboxFileTree } from './SandboxFileTree'
 import { SandboxChat } from './SandboxChat'
@@ -26,8 +27,14 @@ export function SandboxView({
   const [activeFile, setActiveFile] = useState<{ filename: string; content: string } | null>(null)
   const activeFileRef = useRef(activeFile)
   useEffect(() => { activeFileRef.current = activeFile }, [activeFile])
+
   const [loadedSkills, setLoadedSkills] = useState<string[]>([])
   const [recentSkills, setRecentSkills] = useState<string[]>([])
+  // All skills start enabled; user can toggle individually
+  const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set())
+
+  const [thinkingEnabled, setThinkingEnabled] = useState(false)
+  const [activeQuote, setActiveQuote] = useState('')
 
   const handleFileUpdate = useCallback(({ filename, content }: { filename: string; content: string }) => {
     setActiveFile({ filename, content })
@@ -43,6 +50,12 @@ export function SandboxView({
       return merged.sort()
     })
     setRecentSkills(skills)
+    // Enable newly loaded skills by default
+    setEnabledSkills(prev => {
+      const next = new Set(prev)
+      for (const s of skills) next.add(s)
+      return next
+    })
   }, [])
 
   const {
@@ -103,7 +116,7 @@ export function SandboxView({
         body: JSON.stringify({ content: value }),
       })
     } catch {
-      // Silent failure — file save is best-effort, user can retry by editing
+      // Silent failure — file save is best-effort
     }
   }, [sandboxId])
 
@@ -111,6 +124,34 @@ export function SandboxView({
     setRecentSkills([])
     triggerInit()
   }, [triggerInit])
+
+  const handleSkillToggle = useCallback((skill: string) => {
+    setEnabledSkills(prev => {
+      const next = new Set(prev)
+      if (next.has(skill)) next.delete(skill)
+      else next.add(skill)
+      return next
+    })
+  }, [])
+
+  const handleSend = useCallback((content: string) => {
+    sendMessage(content, {
+      thinkingEnabled,
+      enabledSkills: Array.from(enabledSkills),
+    })
+  }, [sendMessage, thinkingEnabled, enabledSkills])
+
+  // Selection listener extension for CodeMirror
+  const selectionExtension = useMemo(() => [
+    EditorView.updateListener.of(update => {
+      if (!update.selectionSet) return
+      const sel = update.state.selection.main
+      if (sel.empty) return // don't clear on deselect — user may have moved to chat
+      const text = update.state.doc.sliceString(sel.from, sel.to)
+      const filename = activeFileRef.current?.filename
+      setActiveQuote(filename ? `[${filename}]\n${text}` : text)
+    }),
+  ], [])
 
   return (
     <div className="flex flex-col h-screen bg-gray-950">
@@ -142,17 +183,19 @@ export function SandboxView({
         </div>
 
         {/* Center: editor */}
-        <div className="flex-1 min-w-0 border-r border-gray-800 flex flex-col">
+        <div className="flex-1 min-w-0 border-r border-gray-800 flex flex-col min-h-0">
           <div className="px-4 py-2 bg-gray-900 border-b border-gray-800 text-xs text-gray-500 shrink-0">
             <span className="font-mono">{activeFile?.filename ?? 'No file open'}</span>
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             {activeFile ? (
               <CodeMirror
                 value={activeFile.content}
                 onChange={handleFileChange}
                 theme="dark"
                 height="100%"
+                style={{ height: '100%' }}
+                extensions={selectionExtension}
                 basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }}
               />
             ) : (
@@ -174,7 +217,13 @@ export function SandboxView({
             initStatus={initStatus}
             loadedSkills={loadedSkills}
             recentSkills={recentSkills}
-            onSend={sendMessage}
+            enabledSkills={enabledSkills}
+            onSkillToggle={handleSkillToggle}
+            thinkingEnabled={thinkingEnabled}
+            onThinkingToggle={() => setThinkingEnabled(v => !v)}
+            quotedText={activeQuote}
+            onClearQuote={() => setActiveQuote('')}
+            onSend={handleSend}
             onReInject={handleReInject}
           />
         </div>

@@ -26,14 +26,13 @@ export async function POST(request: Request) {
     model = 'claude-sonnet-4-6',
     extractionMode = 'guided',
     knowledgeFolderPath = '',
-    sourceSessionId,
   } = await request.json()
 
   if (!title?.trim()) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
   }
 
-  const validModes = ['guided', 'direct', 'socratize', 'socratize_eval']
+  const validModes = ['guided', 'direct', 'socratize']
   if (!validModes.includes(extractionMode)) {
     return NextResponse.json(
       { error: `extractionMode must be one of: ${validModes.join(', ')}` },
@@ -41,28 +40,16 @@ export async function POST(request: Request) {
     )
   }
 
-  // For eval sessions, inherit folder path from source session
-  let effectiveFolderPath = knowledgeFolderPath?.trim() ?? ''
-  if (extractionMode === 'socratize_eval' && sourceSessionId) {
-    const sourceSession = await prisma.chatSession.findUnique({
-      where: { id: sourceSessionId },
-      select: { knowledgeFolderPath: true },
-    })
-    effectiveFolderPath = sourceSession?.knowledgeFolderPath ?? ''
-  }
+  const effectiveFolderPath = knowledgeFolderPath?.trim() ?? ''
 
-  // Folder is required for guided, direct, and socratize
-  const requiresFolder = ['guided', 'direct', 'socratize'].includes(extractionMode)
-  if (requiresFolder) {
-    if (!effectiveFolderPath) {
+  if (!effectiveFolderPath) {
       return NextResponse.json({ error: 'knowledgeFolderPath is required' }, { status: 400 })
-    }
-    if (!fs.existsSync(effectiveFolderPath) || !fs.statSync(effectiveFolderPath).isDirectory()) {
-      return NextResponse.json(
-        { error: 'knowledgeFolderPath must be an existing directory' },
-        { status: 400 }
-      )
-    }
+  }
+  if (!fs.existsSync(effectiveFolderPath) || !fs.statSync(effectiveFolderPath).isDirectory()) {
+    return NextResponse.json(
+      { error: 'knowledgeFolderPath must be an existing directory' },
+      { status: 400 }
+    )
   }
 
   const session = await prisma.chatSession.create({

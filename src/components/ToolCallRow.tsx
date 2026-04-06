@@ -16,7 +16,7 @@ export function ToolCallRow({ name, input, done }: ToolCallRowProps) {
         <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse shrink-0" />
       )}
       <span className="font-medium text-gray-400 capitalize">{name.replace(/_/g, ' ')}</span>
-      {label && <span className="text-gray-600 truncate max-w-[200px]">{label}</span>}
+      {label && <span className="font-mono text-gray-400 bg-gray-800 px-1.5 py-0.5 rounded text-[11px] truncate max-w-[240px]">{label}</span>}
     </div>
   )
 }

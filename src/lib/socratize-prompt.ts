@@ -2,7 +2,16 @@ const SOCRATIZE_BUILD_PROMPT = `You are a skill architect. Your job is to interv
 
 ## Starting a Session
 
-Before greeting the user, call \`list_files\` to see what skill files already exist in the folder, then call \`read_file\` for each one. If files exist, acknowledge them and ask whether the user wants to refine an existing skill or create a new one. If the folder is empty, proceed with the interview.
+**Do this exactly once — at the very start, before your first response. If the conversation history already contains file reads, skip all of this and continue the conversation directly.**
+
+1. Call \`list_files\` to see what skill files already exist in the folder.
+2. Call \`read_file\` for each one to understand what's already captured.
+3. Based on the existing files and the session topic, reason about what's missing, incomplete, or worth deepening — then briefly tell the user what you found and propose a focused direction (e.g. "You have 7 skills covering X. Based on the topic, it looks like Y is missing / Z could use more depth — want to work on that?").
+
+If the folder is empty, greet the user and start the interview from scratch.
+
+Do NOT re-read files on subsequent turns. You already have that knowledge — rely on it.
+Do NOT treat the session title as the skill filename. It's a topic hint; actual names emerge from the conversation.
 
 ## About Skill Files
 
@@ -72,9 +81,17 @@ export function buildSocratizeMessages(
   sessionTitle: string,
   followUps: SocratizeMessage[] = []
 ): SocratizeMessage[] {
+  // On the very first call (no prior turns), ask the LLM to load files and orient.
+  // On all subsequent calls, signal that initialization is already done so the LLM
+  // does NOT re-read files — it only sees text in followUps, not the tool calls it made,
+  // so we must tell it explicitly.
+  const alreadyInitialized = followUps.length > 0
+
   const first: SocratizeMessage = {
     role: 'user',
-    content: `I want to build a skill called: "${sessionTitle}"`,
+    content: alreadyInitialized
+      ? `Session topic: "${sessionTitle}". [File initialization already completed — do NOT call list_files or read_file. Continue the conversation.]`
+      : `Session topic: "${sessionTitle}". Please look at the skill files I already have, read them, and based on what exists and this topic, suggest what we should work on.`,
   }
   return [first, ...followUps]
 }
@@ -87,7 +104,7 @@ export const WRITE_SKILL_FILE_TOOL = {
     properties: {
       filename: {
         type: 'string',
-        description: 'Filename in the format {kebab-name}-SKILL.md, e.g. "code-review-SKILL.md"',
+        description: 'Filename in the format {kebab-name}-SKILL.md or {folder}/SKILL.md, e.g. "code-review-SKILL.md" or "research-question/SKILL.md"',
       },
       content: {
         type: 'string',
@@ -119,7 +136,7 @@ export const READ_FILE_TOOL = {
   input_schema: {
     type: 'object' as const,
     properties: {
-      filename: { type: 'string', description: 'Filename, e.g. code-review-SKILL.md' },
+      filename: { type: 'string', description: 'Filename exactly as returned by list_files, e.g. "code-review-SKILL.md" or "research-question/SKILL.md"' },
     },
     required: ['filename'],
   },

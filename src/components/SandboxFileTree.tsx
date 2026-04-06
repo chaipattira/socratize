@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
 interface SandboxFileTreeProps {
   sandboxId: string
@@ -16,7 +16,6 @@ export function SandboxFileTree({
   onFileClick,
   onFilesUploaded,
 }: SandboxFileTreeProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
@@ -74,20 +73,18 @@ export function SandboxFileTree({
         )}
       </div>
       <div className="px-3 py-2 border-t border-gray-800 shrink-0">
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleUpload}
-        />
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={isUploading}
-          className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-40 transition w-full text-left"
+        <label
+          className={`text-xs text-gray-500 hover:text-gray-300 transition w-full text-left block cursor-pointer ${isUploading ? 'opacity-40 pointer-events-none' : ''}`}
         >
           {isUploading ? 'Uploading...' : '+ Upload file'}
-        </button>
+          <input
+            type="file"
+            multiple
+            className="sr-only"
+            onChange={handleUpload}
+            disabled={isUploading}
+          />
+        </label>
         {uploadError && (
           <p className="text-xs text-red-400 mt-1">{uploadError}</p>
         )}

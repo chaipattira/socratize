@@ -25,9 +25,8 @@ interface UseChatOptions {
   initialMessages?: ChatMessage[]
   onDocOps: (ops: DocOp[]) => void
   onFileUpdate?: (update: { filename: string; content: string }) => void
-  phase: 'building' | 'testing' | null
+  phase: 'building' | null
   thinkingEnabled?: boolean
-  selectedSkillFile?: string
 }
 
 export function useChat({
@@ -37,7 +36,6 @@ export function useChat({
   onFileUpdate,
   phase,
   thinkingEnabled = false,
-  selectedSkillFile,
 }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [streamingText, setStreamingText] = useState('')
@@ -46,9 +44,7 @@ export function useChat({
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Separate conversation histories for each phase
   const buildFollowUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
-  const testFollowUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -80,13 +76,6 @@ export function useChat({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ followUps: buildFollowUps.current }),
-          })
-        } else if (phase === 'testing') {
-          testFollowUps.current.push({ role: 'user', content })
-          response = await fetch(`/api/sessions/${sessionId}/test`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ followUps: testFollowUps.current, selectedSkillFile }),
           })
         } else {
           response = await fetch('/api/chat', {
@@ -134,8 +123,6 @@ export function useChat({
               }
             } else if (event.type === 'doc_ops') {
               onDocOps(event.ops)
-              // In both building and testing phases, doc_ops just updates the skill.
-              // There is no phase transition — that's determined by extractionMode at session creation.
             } else if (event.type === 'file_update') {
               onFileUpdate?.({ filename: event.filename, content: event.content })
             } else if (event.type === 'error') {
@@ -156,8 +143,6 @@ export function useChat({
 
               if (phase === 'building') {
                 buildFollowUps.current.push({ role: 'assistant', content: assistantText })
-              } else if (phase === 'testing') {
-                testFollowUps.current.push({ role: 'assistant', content: assistantText })
               }
             }
           }
@@ -167,14 +152,12 @@ export function useChat({
         setMessages(prev => prev.slice(0, -1))
         if (phase === 'building') {
           buildFollowUps.current = buildFollowUps.current.slice(0, -1)
-        } else if (phase === 'testing') {
-          testFollowUps.current = testFollowUps.current.slice(0, -1)
         }
       } finally {
         setIsStreaming(false)
       }
     },
-    [sessionId, isStreaming, onDocOps, onFileUpdate, phase, thinkingEnabled, selectedSkillFile]
+    [sessionId, isStreaming, onDocOps, onFileUpdate, phase, thinkingEnabled]
   )
 
   // Fires the first LLM turn for the build phase (no prior user message)

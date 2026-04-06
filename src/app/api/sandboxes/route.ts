@@ -18,7 +18,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { name, skillFolderPaths = [] } = await request.json()
+  const { name, skillFolderPaths = [], workspaceFolderPath: customWorkspacePath } = await request.json()
 
   if (!name?.trim()) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -32,28 +32,42 @@ export async function POST(request: Request) {
     }
   }
 
+  // Validate custom workspace path if provided
+  let resolvedWorkspacePath: string | null = null
+  if (customWorkspacePath && typeof customWorkspacePath === 'string') {
+    const trimmed = customWorkspacePath.trim()
+    if (trimmed) {
+      if (!fs.existsSync(trimmed) || !fs.statSync(trimmed).isDirectory()) {
+        return NextResponse.json({ error: 'Workspace folder not found or is not a directory' }, { status: 400 })
+      }
+      resolvedWorkspacePath = trimmed
+    }
+  }
+
   // Create sandbox record
   const sandbox = await prisma.sandbox.create({
     data: {
       name: name.trim(),
       skillFolderPaths: JSON.stringify(validatedPaths),
-      workspaceFolderPath: '', // filled in after we have the id
+      workspaceFolderPath: resolvedWorkspacePath ?? '', // filled in after we have the id if managed
     },
   })
 
-  // Set workspace path and create directory
-  const workspacePath = getWorkspacePath(sandbox.id)
-  try {
-    fs.mkdirSync(workspacePath, { recursive: true })
-  } catch {
-    await prisma.sandbox.delete({ where: { id: sandbox.id } })
-    return NextResponse.json({ error: 'Failed to create workspace directory' }, { status: 500 })
+  // If no custom workspace, create a managed workspace directory
+  if (!resolvedWorkspacePath) {
+    const managedPath = getWorkspacePath(sandbox.id)
+    try {
+      fs.mkdirSync(managedPath, { recursive: true })
+    } catch {
+      await prisma.sandbox.delete({ where: { id: sandbox.id } })
+      return NextResponse.json({ error: 'Failed to create workspace directory' }, { status: 500 })
+    }
+    const updated = await prisma.sandbox.update({
+      where: { id: sandbox.id },
+      data: { workspaceFolderPath: managedPath },
+    })
+    return NextResponse.json(updated, { status: 201 })
   }
 
-  const updated = await prisma.sandbox.update({
-    where: { id: sandbox.id },
-    data: { workspaceFolderPath: workspacePath },
-  })
-
-  return NextResponse.json(updated, { status: 201 })
+  return NextResponse.json(sandbox, { status: 201 })
 }

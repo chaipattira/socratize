@@ -17,11 +17,13 @@ const MODELS: Record<string, { label: string; value: string }[]> = {
 
 type ExtractionMode = 'guided' | 'direct' | 'socratize'
 
-interface NewSessionDialogProps {
-  onClose: () => void
-}
+const modes: { value: ExtractionMode; label: string; description: string }[] = [
+  { value: 'guided', label: 'Help me discover it', description: 'Questions to surface what I know' },
+  { value: 'direct', label: 'I know what to include', description: 'Walk through the steps myself' },
+  { value: 'socratize', label: 'Build an AI agent', description: 'Extract and write skill files for your agent' },
+]
 
-export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
+export function NewSessionClient() {
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [provider, setProvider] = useState('anthropic')
@@ -101,33 +103,40 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
     router.push(`/sessions/${session.id}`)
   }
 
-  const modes: { value: ExtractionMode; label: string; description: string }[] = [
-    { value: 'guided', label: 'Help me discover it', description: 'Questions to surface what I know' },
-    { value: 'direct', label: 'I know what to include', description: 'Walk through the steps myself' },
-    { value: 'socratize', label: 'Build a skill', description: 'Extract and write a skill file' },
-  ]
-
   const canSubmit = !!title.trim() && !!folderPath.trim()
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 overflow-y-auto py-8">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-md mx-4">
-        <h2 className="text-lg font-semibold mb-6">New Session</h2>
+    <div className="min-h-screen bg-gray-950">
+      <header className="border-b border-gray-800 px-6 py-4 flex justify-between items-center">
+        <span className="text-xl font-bold text-red-500">Socratize</span>
+      </header>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+      <main className="max-w-2xl mx-auto px-6 py-10">
+        <button
+          onClick={() => router.push('/')}
+          className="text-sm text-gray-500 hover:text-gray-300 transition mb-6 block"
+        >
+          ← Back
+        </button>
+
+        <h1 className="text-2xl font-semibold mb-8">New Session</h1>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">What knowledge do you want to capture?</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              What knowledge do you want to capture?
+            </label>
             <input
               autoFocus
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="e.g. How I do code review"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-gray-500"
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-gray-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Knowledge base folder path
             </label>
             <div className="flex gap-2">
@@ -136,7 +145,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
                 onChange={e => handleFolderPathChange(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddFolder() } }}
                 placeholder="/absolute/path/to/your/notes"
-                className={`flex-1 bg-gray-800 border rounded-lg px-4 py-2.5 text-sm focus:outline-none font-mono transition ${
+                className={`flex-1 bg-gray-900 border rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none font-mono transition ${
                   folderVerified ? 'border-green-700 focus:border-green-500' : 'border-gray-700 focus:border-gray-500'
                 }`}
               />
@@ -156,7 +165,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
             )}
 
             {folderVerified && (
-              <div className="mt-2 rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden">
+              <div className="mt-2 rounded-lg border border-gray-700 bg-gray-900 overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700 bg-gray-800">
                   <span className="text-xs text-gray-400 font-medium">
                     {folderFiles.length === 0 ? 'Empty folder' : `${folderFiles.length} .md file${folderFiles.length !== 1 ? 's' : ''}`}
@@ -182,32 +191,32 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">How do you want to start?</label>
-            <div className="grid grid-cols-3 gap-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">How do you want to start?</label>
+            <div className="grid grid-cols-3 gap-3">
               {modes.map(mode => (
                 <button
                   key={mode.value}
                   type="button"
                   onClick={() => setExtractionMode(mode.value)}
-                  className={`px-3 py-3 rounded-lg text-sm text-left border transition ${
+                  className={`px-4 py-4 rounded-lg text-sm text-left border transition ${
                     extractionMode === mode.value
                       ? 'bg-red-600/20 border-red-500 text-red-300'
-                      : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                      : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-600'
                   }`}
                 >
-                  <div className="font-medium mb-0.5">{mode.label}</div>
-                  <div className="text-xs opacity-70">{mode.description}</div>
+                  <div className="font-medium mb-1">{mode.label}</div>
+                  <div className="text-xs opacity-70 leading-relaxed">{mode.description}</div>
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">LLM Provider</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">LLM Provider</label>
             <select
               value={provider}
               onChange={e => handleProviderChange(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 focus:outline-none"
             >
               <option value="anthropic">Anthropic (Claude)</option>
               <option value="openai">OpenAI</option>
@@ -215,11 +224,11 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Model</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Model</label>
             <select
               value={model}
               onChange={e => setModel(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 focus:outline-none"
             >
               {MODELS[provider].map(m => (
                 <option key={m.value} value={m.value}>{m.label}</option>
@@ -227,22 +236,21 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
             </select>
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && (
+            <div className="text-red-400 text-sm bg-red-950 border border-red-800 rounded-lg px-4 py-2">
+              {error}
+            </div>
+          )}
 
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 bg-gray-800 hover:bg-gray-700 text-sm py-2.5 rounded-lg transition">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !canSubmit}
-              className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-sm py-2.5 rounded-lg font-medium transition"
-            >
-              {loading ? 'Starting...' : 'Start Session'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading || !canSubmit}
+            className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-medium py-3 rounded-lg transition"
+          >
+            {loading ? 'Starting...' : 'Start Session →'}
+          </button>
         </form>
-      </div>
+      </main>
     </div>
   )
 }

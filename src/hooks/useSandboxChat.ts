@@ -6,6 +6,7 @@ export interface SandboxMessage {
   content: string
   isInit?: boolean
   toolCalls?: Array<{ name: string; input: Record<string, unknown>; done: boolean }>
+  thinking?: string
 }
 
 interface UseSandboxChatOptions {
@@ -15,7 +16,7 @@ interface UseSandboxChatOptions {
   onSkillsLoaded?: (skills: string[]) => void
 }
 
-const INIT_MESSAGE = 'List all available skills and read a preview of each one. Summarize what you\'re equipped to help with.'
+const INIT_MESSAGE = 'List all available skills and read a preview of each one. Also list the workspace files so you know what\'s available. Summarize what you\'re equipped to help with and what files are in the workspace.'
 
 export function useSandboxChat({
   sandboxId,
@@ -33,7 +34,11 @@ export function useSandboxChat({
 
   const followUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
 
-  const runStream = useCallback(async (userContent: string, isInit: boolean) => {
+  const runStream = useCallback(async (
+    userContent: string,
+    isInit: boolean,
+    opts: { thinkingEnabled?: boolean; enabledSkills?: string[] } = {}
+  ) => {
     if (isStreamingRef.current) return
     isStreamingRef.current = true
     setError(null)
@@ -46,6 +51,7 @@ export function useSandboxChat({
     }
 
     let assistantText = ''
+    let assistantThinking = ''
     let toolCallsList: Array<{ name: string; input: Record<string, unknown>; done: boolean }> = []
     setStreamingText('')
     setStreamingToolCalls([])
@@ -54,7 +60,12 @@ export function useSandboxChat({
       const response = await fetch(`/api/sandboxes/${sandboxId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userContent, followUps: followUps.current }),
+        body: JSON.stringify({
+          message: userContent,
+          followUps: followUps.current,
+          thinkingEnabled: opts.thinkingEnabled ?? false,
+          enabledSkills: opts.enabledSkills ?? null,
+        }),
       })
 
       if (!response.ok) {
@@ -79,7 +90,9 @@ export function useSandboxChat({
           if (!frame.startsWith('data: ')) continue
           const event = JSON.parse(frame.slice(6))
 
-          if (event.type === 'text') {
+          if (event.type === 'thinking') {
+            assistantThinking += event.delta
+          } else if (event.type === 'text') {
             assistantText += event.delta
             setStreamingText(assistantText)
           } else if (event.type === 'tool_call') {
@@ -102,6 +115,7 @@ export function useSandboxChat({
               content: assistantText,
               isInit,
               toolCalls: toolCallsList.length ? toolCallsList : undefined,
+              thinking: assistantThinking || undefined,
             }
             setMessages(prev => [...prev, assistantMsg])
             setStreamingText('')
@@ -140,8 +154,8 @@ export function useSandboxChat({
     runStream(INIT_MESSAGE, true)
   }, [runStream])
 
-  const sendMessage = useCallback((content: string) => {
-    runStream(content, false)
+  const sendMessage = useCallback((content: string, opts: { thinkingEnabled?: boolean; enabledSkills?: string[] } = {}) => {
+    runStream(content, false, opts)
   }, [runStream])
 
   return {

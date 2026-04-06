@@ -9,7 +9,7 @@ import { applyDocOps, type DocOp } from '@/lib/doc-ops'
 interface SessionViewProps {
   sessionId: string
   title: string
-  extractionMode: 'guided' | 'direct' | 'socratize' | 'socratize_eval'
+  extractionMode: 'guided' | 'direct' | 'socratize'
   initialMessages: ChatMessage[]
   initialMarkdown: string
   knowledgeFolderPath: string
@@ -41,13 +41,7 @@ export function SessionView({
   const [activeFile, setActiveFile] = useState<{ filename: string; content: string } | null>(null)
 
   // Phase is fixed for the lifetime of the session — derived from extractionMode
-  const phase =
-    extractionMode === 'socratize' ? 'building' as const :
-    extractionMode === 'socratize_eval' ? 'testing' as const :
-    null
-
-  // For eval: the active file in the editor is the skill being tested
-  const selectedSkillFile = phase === 'testing' ? activeFile?.filename : undefined
+  const phase = extractionMode === 'socratize' ? 'building' as const : null
 
   const handleDocOps = useCallback((ops: DocOp[]) => {
     setMarkdown(prev => applyDocOps(prev, ops))
@@ -66,8 +60,11 @@ export function SessionView({
   }, [sessionId])
 
   const handleSelectionChange = useCallback((text: string) => {
-    if (text) setActiveQuote(text)
-  }, [])
+    if (text) {
+      const prefix = activeFile?.filename ? `[${activeFile.filename}]\n` : ''
+      setActiveQuote(prefix + text)
+    }
+  }, [activeFile?.filename])
 
   const handleClearQuote = useCallback(() => {
     setActiveQuote('')
@@ -90,7 +87,6 @@ export function SessionView({
     onFileUpdate: handleFileUpdate,
     phase,
     thinkingEnabled,
-    selectedSkillFile,
   })
 
   const hasAutoTriggered = useRef(false)
@@ -100,10 +96,9 @@ export function SessionView({
     hasAutoTriggered.current = true
     if (extractionMode === 'socratize' && initialMessages.length === 0) {
       triggerBuildPhase()
-    } else if (isKbSession && extractionMode !== 'socratize_eval' && initialMessages.length === 0) {
+    } else if (isKbSession && initialMessages.length === 0) {
       triggerKbSession()
     }
-    // socratize_eval: no auto-trigger — user sends the first test prompt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // intentionally runs once on mount
 
@@ -184,7 +179,6 @@ export function SessionView({
             model={model}
             thinkingEnabled={thinkingEnabled}
             onThinkingToggle={() => setThinkingEnabled(v => !v)}
-            selectedSkillFile={selectedSkillFile}
             quotedText={activeQuote}
             onClearQuote={handleClearQuote}
           />

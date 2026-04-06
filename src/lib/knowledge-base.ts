@@ -15,8 +15,11 @@ export function validateFilename(filename: string): boolean {
 
 export function validateSkillFilename(filename: string): boolean {
   if (!validateFilename(filename)) return false
-  if (filename.includes('/')) return false // flat filenames only
-  return filename === 'SKILL.md' || filename.endsWith('-SKILL.md')
+  // Flat convention: SKILL.md or {kebab-name}-SKILL.md
+  if (!filename.includes('/')) return filename === 'SKILL.md' || filename.endsWith('-SKILL.md')
+  // Subdirectory convention: {folder}/SKILL.md (one level only)
+  const parts = filename.split('/')
+  return parts.length === 2 && parts[1] === 'SKILL.md'
 }
 
 export function listFiles(folderPath: string, prefix = ''): string[] {

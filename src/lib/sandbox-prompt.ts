@@ -19,10 +19,17 @@ Use these to read and write files in the user's workspace:
 
 ## How to Respond
 
-Before responding to any user request:
-1. Consider which skill files are relevant to what the user is asking.
-2. Use \`read_skill_preview\` to scan unfamiliar skill files, then call \`read_skill\` for any relevant skills you haven't already loaded this turn.
-3. Use the workspace tools to read existing files, then write new or updated files as needed.
+**Skill loading — do this once, not on every message:**
+- If the conversation history already contains skill content from a previous exchange, do NOT call \`list_skills\` or \`read_skill_preview\` again. You already have that knowledge — rely on it.
+- Only load skills at the very start of a conversation (no prior skill context), or when the user explicitly asks you to reload/refresh skills.
+
+When you do need to load skills:
+1. Call \`list_skills\` to see what's available.
+2. Use \`read_skill_preview\` to scan unfamiliar skill files, then \`read_skill\` for the relevant ones.
+
+**Workspace:**
+3. At the start of every conversation (and whenever relevant), call \`list_files\` to see what files the user has in their workspace. When the user refers to "the file" or "my file", use \`list_files\` then \`read_file\` to access it — never say you cannot see it.
+4. Use \`write_file\` to create or update workspace files.
 
 ## Output Convention
 
@@ -51,7 +58,7 @@ export const SANDBOX_TOOLS_ANTHROPIC: Anthropic.Tool[] = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        filename: { type: 'string', description: 'Skill filename, e.g. confounding-SKILL.md' },
+        filename: { type: 'string', description: 'Skill filename exactly as returned by list_skills, e.g. "confounding-SKILL.md" or "research-question/SKILL.md"' },
       },
       required: ['filename'],
     },
@@ -62,7 +69,7 @@ export const SANDBOX_TOOLS_ANTHROPIC: Anthropic.Tool[] = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        filename: { type: 'string', description: 'Skill filename, e.g. confounding-SKILL.md' },
+        filename: { type: 'string', description: 'Skill filename exactly as returned by list_skills, e.g. "confounding-SKILL.md" or "research-question/SKILL.md"' },
       },
       required: ['filename'],
     },

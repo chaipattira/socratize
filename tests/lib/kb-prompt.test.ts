@@ -37,4 +37,42 @@ describe('buildKbSystemPrompt', () => {
     const prompt = buildKbSystemPrompt('direct')
     expect(prompt).toContain('Name & Audience')
   })
+
+  it('includes skeptical-expert framing in guided mode', () => {
+    const prompt = buildKbSystemPrompt('guided')
+    expect(prompt).toContain('precise, skeptical, and deliberate')
+  })
+
+  it('includes question quality bar in guided mode', () => {
+    const prompt = buildKbSystemPrompt('guided')
+    expect(prompt).toContain('Actionable')
+    expect(prompt).toContain('Non-leading')
+    expect(prompt).toContain('Grounded')
+  })
+
+  it('includes question taxonomy in guided mode', () => {
+    const prompt = buildKbSystemPrompt('guided')
+    expect(prompt).toContain('Disambiguation')
+    expect(prompt).toContain('Hypothetical')
+    expect(prompt).toContain('Missing/implicit')
+  })
+
+  it('includes skeptical-expert framing in direct mode', () => {
+    const prompt = buildKbSystemPrompt('direct')
+    expect(prompt).toContain('precise, skeptical, and deliberate')
+  })
+
+  it('includes question quality bar in direct mode', () => {
+    const prompt = buildKbSystemPrompt('direct')
+    expect(prompt).toContain('Actionable')
+    expect(prompt).toContain('Non-leading')
+    expect(prompt).toContain('Grounded')
+  })
+
+  it('includes question taxonomy in direct mode', () => {
+    const prompt = buildKbSystemPrompt('direct')
+    expect(prompt).toContain('Disambiguation')
+    expect(prompt).toContain('Hypothetical')
+    expect(prompt).toContain('Missing/implicit')
+  })
 })

@@ -11,7 +11,6 @@ interface SessionCardProps {
   model: string
   extractionMode: string
   onDelete: (id: string) => void
-  onTestSkill: (id: string, title: string, llmProvider: string, model: string) => void
 }
 
 export function SessionCard({
@@ -23,7 +22,6 @@ export function SessionCard({
   model,
   extractionMode,
   onDelete,
-  onTestSkill,
 }: SessionCardProps) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
@@ -36,11 +34,6 @@ export function SessionCard({
     onDelete(id)
   }
 
-  const handleTestSkill = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onTestSkill(id, title, llmProvider, model)
-  }
-
   return (
     <div
       onClick={() => router.push(`/sessions/${id}`)}
@@ -49,14 +42,6 @@ export function SessionCard({
       <div className="flex justify-between items-start">
         <h3 className="font-medium text-gray-100 group-hover:text-white transition">{title}</h3>
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
-          {extractionMode === 'socratize' && (
-            <button
-              onClick={handleTestSkill}
-              className="text-blue-400 hover:text-blue-300 transition text-xs"
-            >
-              Test skill →
-            </button>
-          )}
           <button
             onClick={handleDelete}
             disabled={deleting}
@@ -76,12 +61,6 @@ export function SessionCard({
           <>
             <span>·</span>
             <span className="text-amber-600">skill</span>
-          </>
-        )}
-        {extractionMode === 'socratize_eval' && (
-          <>
-            <span>·</span>
-            <span className="text-blue-600">eval</span>
           </>
         )}
       </div>
