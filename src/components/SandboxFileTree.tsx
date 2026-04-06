@@ -1,5 +1,5 @@
 'use client'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 
 interface SandboxFileTreeProps {
   sandboxId: string
@@ -17,25 +17,36 @@ export function SandboxFileTree({
   onFilesUploaded,
 }: SandboxFileTreeProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files
     if (!selected || selected.length === 0) return
 
-    const formData = new FormData()
-    for (const file of Array.from(selected)) {
-      formData.append('files', file)
+    setIsUploading(true)
+    setUploadError(null)
+
+    try {
+      const formData = new FormData()
+      for (const file of Array.from(selected)) {
+        formData.append('files', file)
+      }
+
+      const res = await fetch(`/api/sandboxes/${sandboxId}/upload`, {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) throw new Error(`Upload failed (${res.status})`)
+
+      const { written } = await res.json() as { written: string[] }
+      onFilesUploaded(written)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setIsUploading(false)
+      e.target.value = ''
     }
-
-    const res = await fetch(`/api/sandboxes/${sandboxId}/upload`, {
-      method: 'POST',
-      body: formData,
-    })
-    if (!res.ok) return
-
-    const { written } = await res.json()
-    onFilesUploaded(written as string[])
-    e.target.value = '' // reset input
   }
 
   return (
@@ -72,10 +83,14 @@ export function SandboxFileTree({
         />
         <button
           onClick={() => inputRef.current?.click()}
-          className="text-xs text-gray-500 hover:text-gray-300 transition w-full text-left"
+          disabled={isUploading}
+          className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-40 transition w-full text-left"
         >
-          + Upload file
+          {isUploading ? 'Uploading...' : '+ Upload file'}
         </button>
+        {uploadError && (
+          <p className="text-xs text-red-400 mt-1">{uploadError}</p>
+        )}
       </div>
     </div>
   )
