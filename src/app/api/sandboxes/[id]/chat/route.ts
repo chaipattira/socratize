@@ -89,9 +89,10 @@ async function runAnthropicLoop(
   thinkingEnabled: boolean,
   sandboxId: string,
   send: (data: object) => void
-): Promise<string> {
+): Promise<{ text: string; toolDelta: Anthropic.MessageParam[] }> {
   const loopMessages: Anthropic.MessageParam[] = [...messages]
   let fullText = ''
+  const initialLength = loopMessages.length
   let iterations = 0
 
   while (true) {
@@ -150,7 +151,7 @@ async function runAnthropicLoop(
     }
   }
 
-  return fullText
+  return { text: fullText, toolDelta: loopMessages.slice(initialLength) }
 }
 
 async function runOpenAILoop(
@@ -163,10 +164,11 @@ async function runOpenAILoop(
   enabledSkills: string[] | null,
   sandboxId: string,
   send: (data: object) => void
-): Promise<string> {
+): Promise<{ text: string; toolDelta: OpenAI.Chat.ChatCompletionMessageParam[] }> {
   type OAIMsg = OpenAI.Chat.ChatCompletionMessageParam
   const loopMessages: OAIMsg[] = [{ role: 'system', content: systemPrompt }, ...messages]
   let fullText = ''
+  const initialLength = loopMessages.length
   let iterations = 0
 
   while (true) {
@@ -206,7 +208,7 @@ async function runOpenAILoop(
     }
   }
 
-  return fullText
+  return { text: fullText, toolDelta: loopMessages.slice(initialLength) }
 }
 
 export async function POST(
@@ -264,10 +266,11 @@ export async function POST(
 
         const model = apiKeyRecord!.provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o'
         let assistantText = ''
+        let toolDelta: unknown[] = []
 
         if (apiKeyRecord!.provider === 'anthropic') {
           const anthropic = new Anthropic({ apiKey: decryptedKey })
-          assistantText = await runAnthropicLoop(
+          const result = await runAnthropicLoop(
             anthropic, model, systemPrompt,
             llmMessages as Anthropic.MessageParam[],
             skillFolderPaths, sandbox.workspaceFolderPath,
@@ -276,9 +279,11 @@ export async function POST(
             id,
             send
           )
+          assistantText = result.text
+          toolDelta = result.toolDelta
         } else {
           const openai = new OpenAI({ apiKey: decryptedKey })
-          assistantText = await runOpenAILoop(
+          const result = await runOpenAILoop(
             openai, model, systemPrompt,
             llmMessages as OpenAI.Chat.ChatCompletionMessageParam[],
             skillFolderPaths, sandbox.workspaceFolderPath,
@@ -286,13 +291,20 @@ export async function POST(
             id,
             send
           )
+          assistantText = result.text
+          toolDelta = result.toolDelta
         }
 
-        // Persist user message + assistant response
+        // Persist user message + assistant response (with tool history if any)
         await prisma.sandboxMessage.createMany({
           data: [
             { sandboxId: id, role: 'user', content: currentMessage },
-            { sandboxId: id, role: 'assistant', content: assistantText },
+            {
+              sandboxId: id,
+              role: 'assistant',
+              content: assistantText,
+              toolHistory: toolDelta.length > 0 ? JSON.stringify(toolDelta) : null,
+            },
           ],
         })
         await prisma.sandbox.update({ where: { id }, data: { updatedAt: new Date() } })
