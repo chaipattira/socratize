@@ -23,7 +23,7 @@ app.prepare().then(() => {
     const url = req.url ?? ''
     const match = url.match(/^\/api\/sandboxes\/([^/?]+)\/terminal/)
     if (!match) {
-      socket.destroy()
+      // Not our terminal — let Next.js handle it (e.g. /_next/webpack-hmr)
       return
     }
     const sandboxId = match[1]
@@ -36,6 +36,11 @@ app.prepare().then(() => {
       }
 
       const entry = getOrCreatePty(sandboxId, sandbox.workspaceFolderPath)
+
+      // Replay buffered output so the terminal shows what the agent already ran
+      if (entry.outputBuffer) {
+        ws.send(entry.outputBuffer)
+      }
 
       // Stream PTY output to browser
       const dataListener = (data: string) => {

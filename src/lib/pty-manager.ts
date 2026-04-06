@@ -1,12 +1,22 @@
 // src/lib/pty-manager.ts
 import * as pty from 'node-pty'
 
+const MAX_BUFFER = 200 * 1024 // 200KB scrollback buffer
+
 interface PtyEntry {
   process: pty.IPty
   dataListeners: Array<(data: string) => void>
+  outputBuffer: string
 }
 
-const ptyMap = new Map<string, PtyEntry>()
+// Use a Node.js global so both the custom server (tsx) and the Next.js
+// bundled API routes share the same ptyMap instance.
+declare global {
+  // eslint-disable-next-line no-var
+  var __socratize_ptyMap: Map<string, PtyEntry> | undefined
+}
+const ptyMap: Map<string, PtyEntry> = global.__socratize_ptyMap ?? new Map()
+global.__socratize_ptyMap = ptyMap
 
 export function getOrCreatePty(sandboxId: string, workspacePath: string): PtyEntry {
   if (!ptyMap.has(sandboxId)) {
@@ -18,8 +28,12 @@ export function getOrCreatePty(sandboxId: string, workspacePath: string): PtyEnt
       cwd: workspacePath,
       env: process.env as Record<string, string>,
     })
-    const entry: PtyEntry = { process: p, dataListeners: [] }
+    const entry: PtyEntry = { process: p, dataListeners: [], outputBuffer: '' }
     p.onData(data => {
+      entry.outputBuffer += data
+      if (entry.outputBuffer.length > MAX_BUFFER) {
+        entry.outputBuffer = entry.outputBuffer.slice(-MAX_BUFFER)
+      }
       for (const listener of entry.dataListeners) listener(data)
     })
     ptyMap.set(sandboxId, entry)

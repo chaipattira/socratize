@@ -1,5 +1,6 @@
 'use client'
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useDragResize } from '@/hooks/useDragResize'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { EditorView } from '@codemirror/view'
@@ -37,6 +38,24 @@ export function SandboxView({
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
   const [activeQuote, setActiveQuote] = useState('')
   const [terminalOpen, setTerminalOpen] = useState(false)
+
+  const [fileTreeWidth, setFileTreeWidth] = useState(192)
+  const [chatWidth, setChatWidth] = useState(384)
+  const [terminalHeight, setTerminalHeight] = useState(280)
+
+  const onFileTreeDrag = useCallback((delta: number) => {
+    setFileTreeWidth(prev => Math.min(320, Math.max(120, prev + delta)))
+  }, [])
+  const onChatDrag = useCallback((delta: number) => {
+    setChatWidth(prev => Math.min(600, Math.max(240, prev - delta)))
+  }, [])
+  const onTerminalDrag = useCallback((delta: number) => {
+    setTerminalHeight(prev => Math.min(window.innerHeight * 0.6, Math.max(80, prev - delta)))
+  }, [])
+
+  const fileTreeDragHandle = useDragResize(onFileTreeDrag)
+  const chatDragHandle = useDragResize(onChatDrag)
+  const terminalDragHandle = useDragResize(onTerminalDrag, 'y')
 
   const handleFileUpdate = useCallback(({ filename, content }: { filename: string; content: string }) => {
     setActiveFile({ filename, content })
@@ -190,9 +209,9 @@ export function SandboxView({
       </div>
 
       {/* Three-pane IDE */}
-      <div className="flex flex-1 min-h-0" style={{ minHeight: terminalOpen ? '0' : undefined }}>
+      <div className="flex flex-1 min-h-0">
         {/* Left: file tree */}
-        <div className="w-48 shrink-0 border-r border-sepia flex flex-col bg-vellum">
+        <div style={{ width: fileTreeWidth }} className="shrink-0 border-r border-sepia flex flex-col bg-vellum">
           <SandboxFileTree
             sandboxId={sandboxId}
             files={files}
@@ -202,6 +221,10 @@ export function SandboxView({
           />
         </div>
 
+        <div
+          onMouseDown={fileTreeDragHandle}
+          className="w-1 shrink-0 bg-sepia hover:bg-stone-400 cursor-col-resize transition-colors select-none"
+        />
         {/* Center: editor */}
         <div className="flex-1 min-w-0 border-r border-sepia flex flex-col min-h-0">
           <div className="px-4 py-2 bg-parchment border-b border-sepia text-xs text-stone-400 font-mono shrink-0">
@@ -226,8 +249,12 @@ export function SandboxView({
           </div>
         </div>
 
+        <div
+          onMouseDown={chatDragHandle}
+          className="w-1 shrink-0 bg-sepia hover:bg-stone-400 cursor-col-resize transition-colors select-none"
+        />
         {/* Right: chat */}
-        <div className="w-96 shrink-0 flex flex-col min-h-0">
+        <div style={{ width: chatWidth }} className="shrink-0 flex flex-col min-h-0">
           <SandboxChat
             messages={messages}
             streamingText={streamingText}
@@ -251,7 +278,11 @@ export function SandboxView({
 
       {/* Bottom: terminal panel */}
       {terminalOpen && (
-        <div className="h-[30vh] shrink-0 border-t border-stone-700 flex flex-col bg-[#1c1917]">
+        <div style={{ height: terminalHeight }} className="shrink-0 flex flex-col bg-[#1c1917]">
+          <div
+            onMouseDown={terminalDragHandle}
+            className="h-1 shrink-0 bg-stone-700 hover:bg-stone-500 cursor-row-resize transition-colors select-none"
+          />
           <div className="flex items-center justify-between px-3 py-1 border-b border-stone-700 shrink-0">
             <span className="text-xs text-stone-400 font-mono">Terminal</span>
             <button

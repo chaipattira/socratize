@@ -186,7 +186,10 @@ export function SandboxChat({
             title="Toggle extended thinking"
           >
             <span className="text-[10px]">✦</span>
-            <span>{thinkingEnabled ? 'ON' : 'OFF'}</span>
+            <span>Thinking</span>
+            <span className={thinkingEnabled ? 'text-wine/70' : 'text-stone-300'}>
+              {thinkingEnabled ? 'ON' : 'OFF'}
+            </span>
           </button>
           {initStatus === 'done' && (
             <button

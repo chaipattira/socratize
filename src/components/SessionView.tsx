@@ -5,6 +5,7 @@ import { ChatPane } from './ChatPane'
 import { EditorPane } from './EditorPane'
 import { useChat, type ChatMessage } from '@/hooks/useChat'
 import { applyDocOps, type DocOp } from '@/lib/doc-ops'
+import { useDragResize } from '@/hooks/useDragResize'
 
 interface SessionViewProps {
   sessionId: string
@@ -35,6 +36,15 @@ export function SessionView({
   const [markdown, setMarkdown] = useState(initialMarkdown)
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
   const [activeQuote, setActiveQuote] = useState('')
+  const [editorPct, setEditorPct] = useState(50)
+  const splitContainerRef = useRef<HTMLDivElement>(null)
+
+  const onEditorDrag = useCallback((delta: number) => {
+    if (!splitContainerRef.current) return
+    const total = splitContainerRef.current.clientWidth
+    setEditorPct(prev => Math.min(80, Math.max(20, prev + (delta / total) * 100)))
+  }, [])
+  const editorDragHandle = useDragResize(onEditorDrag)
 
   // KB state
   const [files, setFiles] = useState<string[]>(initialFiles)
@@ -141,8 +151,8 @@ export function SessionView({
       </div>
 
       {/* Split pane */}
-      <div className="flex flex-1 min-h-0">
-        <div className="flex-1 border-r border-sepia min-h-0 min-w-0 overflow-hidden">
+      <div ref={splitContainerRef} className="flex flex-1 min-h-0">
+        <div style={{ width: `${editorPct}%` }} className="min-h-0 min-w-0 overflow-hidden shrink-0">
           <EditorPane
             filename={isKbSession ? (activeFile?.filename ?? '') : filename}
             content={isKbSession ? (activeFile?.content ?? '') : markdown}
@@ -165,7 +175,11 @@ export function SessionView({
             onSelectionChange={handleSelectionChange}
           />
         </div>
-        <div className="flex-1 min-h-0">
+        <div
+          onMouseDown={editorDragHandle}
+          className="w-1 shrink-0 bg-sepia hover:bg-stone-400 cursor-col-resize transition-colors select-none"
+        />
+        <div className="flex-1 min-h-0 min-w-0">
           <ChatPane
             messages={messages}
             streamingText={streamingText}
