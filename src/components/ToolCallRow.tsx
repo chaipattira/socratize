@@ -22,14 +22,16 @@ function CommandScript({ command }: { command: string }) {
   return (
     <div className="mt-0.5 w-full">
       <button
+        type="button"
         onClick={() => setExpanded(v => !v)}
+        aria-expanded={expanded}
         className="flex items-center gap-1 text-[11px] text-stone-400 hover:text-stone-600 transition font-mono max-w-[240px]"
       >
         <span className="truncate">{lines[0]}…</span>
         <span className="text-stone-300 shrink-0">{expanded ? '▲' : '▼'}</span>
       </button>
       {expanded && (
-        <pre className="mt-1 pl-3 border-l border-sepia text-[11px] text-stone-400 leading-relaxed font-mono whitespace-pre max-h-40 overflow-y-auto">
+        <pre className="mt-1 pl-3 border-l border-sepia text-[11px] text-stone-400 leading-relaxed font-mono max-h-40 overflow-y-auto">
           {command}
         </pre>
       )}
