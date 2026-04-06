@@ -14,6 +14,7 @@ interface UseSandboxChatOptions {
   initialMessages?: SandboxMessage[]
   onFileUpdate?: (update: { filename: string; content: string }) => void
   onSkillsLoaded?: (skills: string[]) => void
+  onCommandRun?: () => void
 }
 
 const INIT_MESSAGE = 'List all available skills and read a preview of each one. Also list the workspace files so you know what\'s available. Summarize what you\'re equipped to help with and what files are in the workspace.'
@@ -23,6 +24,7 @@ export function useSandboxChat({
   initialMessages = [],
   onFileUpdate,
   onSkillsLoaded,
+  onCommandRun,
 }: UseSandboxChatOptions) {
   const [messages, setMessages] = useState<SandboxMessage[]>(initialMessages)
   const [streamingText, setStreamingText] = useState('')
@@ -98,6 +100,7 @@ export function useSandboxChat({
           } else if (event.type === 'tool_call') {
             toolCallsList = [...toolCallsList, { name: event.name, input: event.input ?? {}, done: false }]
             setStreamingToolCalls([...toolCallsList])
+            if (event.name === 'run_command') onCommandRun?.()
           } else if (event.type === 'tool_result') {
             const idx = toolCallsList.findLastIndex(tc => !tc.done)
             if (idx !== -1) {
@@ -147,7 +150,7 @@ export function useSandboxChat({
       setIsStreaming(false)
       if (isInit) setInitStatus(prev => prev === 'loading' ? 'error' : prev)
     }
-  }, [sandboxId, onFileUpdate, onSkillsLoaded])
+  }, [sandboxId, onFileUpdate, onSkillsLoaded, onCommandRun])
 
   const triggerInit = useCallback(() => {
     setInitStatus('loading')
