@@ -52,7 +52,10 @@ export function DashboardClient({ initialSessions }: DashboardClientProps) {
     <div className="min-h-screen bg-gray-950">
       <header className="border-b border-gray-800 px-6 py-4 flex justify-between items-center">
         <span className="text-xl font-bold text-red-500">Socratize</span>
-        <Link href="/settings" className="text-sm text-gray-400 hover:text-gray-200 transition">Settings</Link>
+        <div className="flex items-center gap-4">
+          <Link href="/sandbox" className="text-sm text-gray-400 hover:text-gray-200 transition">Sandbox</Link>
+          <Link href="/settings" className="text-sm text-gray-400 hover:text-gray-200 transition">Settings</Link>
+        </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-10">
