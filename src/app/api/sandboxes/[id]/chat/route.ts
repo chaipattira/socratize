@@ -12,14 +12,16 @@ import {
   readWorkspaceFile,
   writeWorkspaceFile,
 } from '@/lib/sandbox-tools'
+import { runCommand } from '@/lib/pty-manager'
 
-function executeSandboxTool(
+async function executeSandboxTool(
   name: string,
   input: Record<string, unknown>,
   skillFolderPaths: string[],
   workspacePath: string,
-  enabledSkills: string[] | null
-): { result: string; fileUpdate?: { filename: string; content: string } } {
+  enabledSkills: string[] | null,
+  sandboxId: string
+): Promise<{ result: string; fileUpdate?: { filename: string; content: string } }> {
   if (name === 'list_skills') {
     const skills = listSkillsAcrossFolders(skillFolderPaths)
     const filtered = enabledSkills ? skills.filter(s => enabledSkills.includes(s)) : skills
@@ -61,6 +63,18 @@ function executeSandboxTool(
       return { result: `Error: ${String(e)}` }
     }
   }
+  if (name === 'run_command') {
+    const command = input.command as string
+    const timeoutMs = typeof input.timeout_seconds === 'number'
+      ? input.timeout_seconds * 1000
+      : 30000
+    try {
+      const output = await runCommand(sandboxId, workspacePath, command, timeoutMs)
+      return { result: output || '(no output)' }
+    } catch (e) {
+      return { result: `Error: ${String(e)}` }
+    }
+  }
   return { result: 'Error: unknown tool' }
 }
 
@@ -73,6 +87,7 @@ async function runAnthropicLoop(
   workspacePath: string,
   enabledSkills: string[] | null,
   thinkingEnabled: boolean,
+  sandboxId: string,
   send: (data: object) => void
 ): Promise<string> {
   const loopMessages: Anthropic.MessageParam[] = [...messages]
@@ -115,8 +130,8 @@ async function runAnthropicLoop(
 
       for (const toolUse of toolUseBlocks) {
         send({ type: 'tool_call', name: toolUse.name, input: toolUse.input })
-        const { result, fileUpdate } = executeSandboxTool(
-          toolUse.name, toolUse.input, skillFolderPaths, workspacePath, enabledSkills
+        const { result, fileUpdate } = await executeSandboxTool(
+          toolUse.name, toolUse.input, skillFolderPaths, workspacePath, enabledSkills, sandboxId
         )
         if (fileUpdate) {
           send({ type: 'file_update', filename: fileUpdate.filename, content: fileUpdate.content })
@@ -146,6 +161,7 @@ async function runOpenAILoop(
   skillFolderPaths: string[],
   workspacePath: string,
   enabledSkills: string[] | null,
+  sandboxId: string,
   send: (data: object) => void
 ): Promise<string> {
   type OAIMsg = OpenAI.Chat.ChatCompletionMessageParam
@@ -173,7 +189,7 @@ async function runOpenAILoop(
         const name = toolCall.function.name
         const input = JSON.parse(toolCall.function.arguments) as Record<string, unknown>
         send({ type: 'tool_call', name, input })
-        const { result, fileUpdate } = executeSandboxTool(name, input, skillFolderPaths, workspacePath, enabledSkills)
+        const { result, fileUpdate } = await executeSandboxTool(name, input, skillFolderPaths, workspacePath, enabledSkills, sandboxId)
         if (fileUpdate) {
           send({ type: 'file_update', filename: fileUpdate.filename, content: fileUpdate.content })
         }
@@ -257,6 +273,7 @@ export async function POST(
             skillFolderPaths, sandbox.workspaceFolderPath,
             enabledSkills as string[] | null,
             thinkingEnabled as boolean,
+            id,
             send
           )
         } else {
@@ -266,6 +283,7 @@ export async function POST(
             llmMessages as OpenAI.Chat.ChatCompletionMessageParam[],
             skillFolderPaths, sandbox.workspaceFolderPath,
             enabledSkills as string[] | null,
+            id,
             send
           )
         }
