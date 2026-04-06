@@ -1,0 +1,156 @@
+import { useState, useCallback, useRef } from 'react'
+
+export interface SandboxMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  isInit?: boolean
+  toolCalls?: Array<{ name: string; input: Record<string, unknown>; done: boolean }>
+}
+
+interface UseSandboxChatOptions {
+  sandboxId: string
+  initialMessages?: SandboxMessage[]
+  onFileUpdate?: (update: { filename: string; content: string }) => void
+  onSkillsLoaded?: (skills: string[]) => void
+}
+
+const INIT_MESSAGE = 'List all available skills and read a preview of each one. Summarize what you\'re equipped to help with.'
+
+export function useSandboxChat({
+  sandboxId,
+  initialMessages = [],
+  onFileUpdate,
+  onSkillsLoaded,
+}: UseSandboxChatOptions) {
+  const [messages, setMessages] = useState<SandboxMessage[]>(initialMessages)
+  const [streamingText, setStreamingText] = useState('')
+  const [streamingToolCalls, setStreamingToolCalls] = useState<Array<{ name: string; input: Record<string, unknown>; done: boolean }>>([])
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [initStatus, setInitStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+
+  const followUps = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([])
+
+  const runStream = useCallback(async (userContent: string, isInit: boolean) => {
+    if (isStreaming) return
+    setError(null)
+    setIsStreaming(true)
+
+    if (!isInit) {
+      const userMsg: SandboxMessage = { id: crypto.randomUUID(), role: 'user', content: userContent }
+      setMessages(prev => [...prev, userMsg])
+      followUps.current.push({ role: 'user', content: userContent })
+    }
+
+    let assistantText = ''
+    let toolCallsList: Array<{ name: string; input: Record<string, unknown>; done: boolean }> = []
+    setStreamingText('')
+    setStreamingToolCalls([])
+
+    try {
+      const response = await fetch(`/api/sandboxes/${sandboxId}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userContent, followUps: followUps.current }),
+      })
+
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error ?? 'Failed to send message')
+      }
+
+      const reader = response.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const frames = buffer.split('\n\n')
+        buffer = frames.pop() ?? ''
+
+        for (const frame of frames) {
+          if (!frame.startsWith('data: ')) continue
+          const event = JSON.parse(frame.slice(6))
+
+          if (event.type === 'text') {
+            assistantText += event.delta
+            setStreamingText(assistantText)
+          } else if (event.type === 'tool_call') {
+            toolCallsList = [...toolCallsList, { name: event.name, input: event.input ?? {}, done: false }]
+            setStreamingToolCalls([...toolCallsList])
+          } else if (event.type === 'tool_result') {
+            const idx = toolCallsList.findLastIndex(tc => !tc.done)
+            if (idx !== -1) {
+              toolCallsList = toolCallsList.map((tc, i) => i === idx ? { ...tc, done: true } : tc)
+              setStreamingToolCalls([...toolCallsList])
+            }
+          } else if (event.type === 'file_update') {
+            onFileUpdate?.({ filename: event.filename, content: event.content })
+          } else if (event.type === 'error') {
+            throw new Error(event.message)
+          } else if (event.type === 'done') {
+            const assistantMsg: SandboxMessage = {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: assistantText,
+              isInit,
+              toolCalls: toolCallsList.length ? toolCallsList : undefined,
+            }
+            setMessages(prev => [...prev, assistantMsg])
+            setStreamingText('')
+            setStreamingToolCalls([])
+
+            if (!isInit) {
+              followUps.current.push({ role: 'assistant', content: assistantText })
+            }
+
+            // Parse skill names from init response tool calls
+            if (isInit) {
+              const listCall = toolCallsList.find(tc => tc.name === 'list_skills')
+              if (listCall) {
+                // Skills will be visible via the tool_result — extract from follow-up read_skill_preview calls
+                const previewCalls = toolCallsList.filter(tc => tc.name === 'read_skill_preview')
+                const skills = previewCalls.map(tc => String(tc.input.filename)).filter(Boolean)
+                if (skills.length > 0) onSkillsLoaded?.(skills)
+              }
+              setInitStatus('done')
+            }
+          }
+        }
+      }
+    } catch (err) {
+      setError(String(err))
+      if (!isInit) {
+        setMessages(prev => prev.slice(0, -1))
+        followUps.current = followUps.current.slice(0, -1)
+      }
+      if (isInit) setInitStatus('error')
+    } finally {
+      setIsStreaming(false)
+    }
+  }, [sandboxId, isStreaming, onFileUpdate, onSkillsLoaded])
+
+  const triggerInit = useCallback(() => {
+    setInitStatus('loading')
+    runStream(INIT_MESSAGE, true)
+  }, [runStream])
+
+  const sendMessage = useCallback((content: string) => {
+    runStream(content, false)
+  }, [runStream])
+
+  return {
+    messages,
+    streamingText,
+    streamingToolCalls,
+    isStreaming,
+    error,
+    initStatus,
+    triggerInit,
+    sendMessage,
+  }
+}
