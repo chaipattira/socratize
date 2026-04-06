@@ -1,0 +1,82 @@
+'use client'
+import { useRef } from 'react'
+
+interface SandboxFileTreeProps {
+  sandboxId: string
+  files: string[]
+  activeFilename: string | null
+  onFileClick: (filename: string) => void
+  onFilesUploaded: (filenames: string[]) => void
+}
+
+export function SandboxFileTree({
+  sandboxId,
+  files,
+  activeFilename,
+  onFileClick,
+  onFilesUploaded,
+}: SandboxFileTreeProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files
+    if (!selected || selected.length === 0) return
+
+    const formData = new FormData()
+    for (const file of Array.from(selected)) {
+      formData.append('files', file)
+    }
+
+    const res = await fetch(`/api/sandboxes/${sandboxId}/upload`, {
+      method: 'POST',
+      body: formData,
+    })
+    if (!res.ok) return
+
+    const { written } = await res.json()
+    onFilesUploaded(written as string[])
+    e.target.value = '' // reset input
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-800 font-medium uppercase tracking-wide shrink-0">
+        Workspace
+      </div>
+      <div className="flex-1 overflow-y-auto py-1">
+        {files.length === 0 ? (
+          <p className="px-3 py-2 text-xs text-gray-600 italic">No files yet</p>
+        ) : (
+          files.map(f => (
+            <button
+              key={f}
+              onClick={() => onFileClick(f)}
+              className={`w-full text-left px-3 py-1.5 text-xs font-mono truncate transition ${
+                f === activeFilename
+                  ? 'bg-gray-800 text-gray-100'
+                  : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'
+              }`}
+            >
+              {f}
+            </button>
+          ))
+        )}
+      </div>
+      <div className="px-3 py-2 border-t border-gray-800 shrink-0">
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleUpload}
+        />
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="text-xs text-gray-500 hover:text-gray-300 transition w-full text-left"
+        >
+          + Upload file
+        </button>
+      </div>
+    </div>
+  )
+}
