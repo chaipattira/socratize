@@ -7,6 +7,7 @@ import { EditorView, keymap } from '@codemirror/view'
 import { insertNewlineAndIndent } from '@codemirror/commands'
 import type { ChatMessage, ToolCallItem } from '@/hooks/useChat'
 import { supportsThinking } from '@/lib/thinking-models'
+import { ToolCallRow } from './ToolCallRow'
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
 
@@ -49,20 +50,6 @@ function ThinkingBlockView({ text, isStreaming }: { text: string; isStreaming?: 
   )
 }
 
-function ToolCallRow({ name, input, done }: { name: string; input: Record<string, unknown>; done: boolean }) {
-  const label = input.filename ? String(input.filename) : input.section ? String(input.section) : ''
-  return (
-    <div className="flex items-center gap-2 text-xs text-gray-500 py-0.5">
-      {done ? (
-        <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0" />
-      ) : (
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse shrink-0" />
-      )}
-      <span className="font-medium text-gray-400 capitalize">{name.replace(/_/g, ' ')}</span>
-      {label && <span className="text-gray-600 truncate max-w-[200px]">{label}</span>}
-    </div>
-  )
-}
 
 export function ChatPane({
   messages,

@@ -6,6 +6,7 @@ import { markdown } from '@codemirror/lang-markdown'
 import { EditorView, keymap } from '@codemirror/view'
 import { insertNewlineAndIndent } from '@codemirror/commands'
 import type { SandboxMessage } from '@/hooks/useSandboxChat'
+import { ToolCallRow } from './ToolCallRow'
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
 
@@ -22,20 +23,6 @@ interface SandboxChatProps {
   onReInject: () => void
 }
 
-function ToolCallRow({ name, input, done }: { name: string; input: Record<string, unknown>; done: boolean }) {
-  const label = input.filename ? String(input.filename) : ''
-  return (
-    <div className="flex items-center gap-2 text-xs text-gray-500 py-0.5">
-      {done ? (
-        <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0" />
-      ) : (
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse shrink-0" />
-      )}
-      <span className="font-medium text-gray-400 capitalize">{name.replace(/_/g, ' ')}</span>
-      {label && <span className="text-gray-600 truncate max-w-[200px]">{label}</span>}
-    </div>
-  )
-}
 
 export function SandboxChat({
   messages,
@@ -82,7 +69,8 @@ export function SandboxChat({
     ]),
   ], [])
 
-  const skillsBadge = () => {
+  const skillsBadgeNode = useMemo(() => {
+    if (initStatus === 'idle') return null
     if (initStatus === 'loading') {
       return <span className="text-xs text-gray-500 animate-pulse">Loading skills...</span>
     }
@@ -113,13 +101,13 @@ export function SandboxChat({
         ))}
       </div>
     )
-  }
+  }, [initStatus, loadedSkills, recentSkills, onReInject])
 
   return (
     <div className="flex flex-col h-full">
       {/* Header: skills badge + re-inject */}
       <div className="px-4 py-2 bg-gray-900 border-b border-gray-800 flex items-center justify-between gap-2 min-h-[40px]">
-        <div className="flex-1 min-w-0">{skillsBadge()}</div>
+        <div className="flex-1 min-w-0">{skillsBadgeNode}</div>
         {initStatus === 'done' && (
           <button
             onClick={onReInject}
