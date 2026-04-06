@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import fs from 'fs'
-import path from 'path'
-
-function getWorkspacePath(sandboxId: string): string {
-  return path.join(process.cwd(), 'data', 'workspaces', sandboxId)
-}
+import { getWorkspacePath } from '@/lib/sandbox-tools'
 
 export async function GET() {
   const sandboxes = await prisma.sandbox.findMany({
@@ -47,7 +43,12 @@ export async function POST(request: Request) {
 
   // Set workspace path and create directory
   const workspacePath = getWorkspacePath(sandbox.id)
-  fs.mkdirSync(workspacePath, { recursive: true })
+  try {
+    fs.mkdirSync(workspacePath, { recursive: true })
+  } catch {
+    await prisma.sandbox.delete({ where: { id: sandbox.id } })
+    return NextResponse.json({ error: 'Failed to create workspace directory' }, { status: 500 })
+  }
 
   const updated = await prisma.sandbox.update({
     where: { id: sandbox.id },

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import type OpenAI from 'openai'
 import {
   buildSandboxSystemPrompt,
   SANDBOX_TOOLS_ANTHROPIC,
@@ -40,7 +41,7 @@ describe('SANDBOX_TOOLS_ANTHROPIC', () => {
 
 describe('SANDBOX_TOOLS_OPENAI', () => {
   it('defines all 6 tools', () => {
-    const names = SANDBOX_TOOLS_OPENAI.map(t => t.function.name)
+    const names = SANDBOX_TOOLS_OPENAI.map(t => (t as OpenAI.Chat.ChatCompletionFunctionTool).function.name)
     expect(names).toContain('list_skills')
     expect(names).toContain('read_skill')
     expect(names).toContain('read_skill_preview')

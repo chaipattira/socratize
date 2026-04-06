@@ -3,6 +3,10 @@ import path from 'path'
 
 const MAX_FILE_BYTES = 50 * 1024 // 50KB
 
+export function getWorkspacePath(sandboxId: string): string {
+  return path.join(process.cwd(), 'data', 'workspaces', sandboxId)
+}
+
 export function validateWorkspaceFilename(filename: string): boolean {
   if (!filename) return false
   if (filename.startsWith('/')) return false
