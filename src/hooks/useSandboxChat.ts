@@ -68,6 +68,8 @@ export function useSandboxChat({
     setStreamingText('')
     setStreamingToolCalls([])
 
+    let wasAborted = false
+
     try {
       const response = await fetch(`/api/sandboxes/${sandboxId}/chat`, {
         method: 'POST',
@@ -152,8 +154,8 @@ export function useSandboxChat({
         }
       }
     } catch (err) {
-      const isAbort = err instanceof DOMException && err.name === 'AbortError'
-      if (!isAbort) {
+      wasAborted = err instanceof DOMException && err.name === 'AbortError'
+      if (!wasAborted) {
         setError(String(err))
         if (!isInit) {
           setMessages(prev => prev.slice(0, -1))
@@ -164,7 +166,7 @@ export function useSandboxChat({
     } finally {
       isStreamingRef.current = false
       setIsStreaming(false)
-      if (isInit) setInitStatus(prev => prev === 'loading' ? 'error' : prev)
+      if (isInit && !wasAborted) setInitStatus(prev => prev === 'loading' ? 'error' : prev)
     }
   }, [sandboxId, onFileUpdate, onSkillsLoaded, onCommandRun, onCommandComplete])
 
