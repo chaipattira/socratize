@@ -11,7 +11,7 @@ interface SessionSummary {
   model: string
   extractionMode: string
   updatedAt: string
-  _count: { messages: number }
+  _count: { conversations: number }
 }
 
 interface DashboardClientProps {
@@ -61,7 +61,7 @@ export function DashboardClient({ initialSessions }: DashboardClientProps) {
                 id={s.id}
                 title={s.title}
                 updatedAt={s.updatedAt}
-                messageCount={s._count.messages}
+                messageCount={s._count.conversations}
                 llmProvider={s.llmProvider}
                 model={s.model}
                 extractionMode={s.extractionMode}

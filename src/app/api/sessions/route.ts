@@ -13,7 +13,7 @@ export async function GET() {
       extractionMode: true,
       createdAt: true,
       updatedAt: true,
-      _count: { select: { messages: true } },
+      _count: { select: { conversations: true } },
     },
   })
   return NextResponse.json(sessions)

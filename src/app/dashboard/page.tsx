@@ -13,7 +13,7 @@ export default async function DashboardPage() {
     select: {
       id: true, title: true, llmProvider: true, model: true,
       extractionMode: true, createdAt: true, updatedAt: true,
-      _count: { select: { messages: true } },
+      _count: { select: { conversations: true } },
     },
   })
 

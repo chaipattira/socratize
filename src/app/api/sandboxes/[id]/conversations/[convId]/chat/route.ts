@@ -111,7 +111,7 @@ async function runAnthropicLoop(
       ;(createParams as any).betas = ['interleaved-thinking-2025-05-14']
     }
 
-    const response = await anthropic.messages.create(createParams)
+    const response = await anthropic.messages.create(createParams) as Anthropic.Message
 
     let turnText = ''
     let turnThinking = ''
