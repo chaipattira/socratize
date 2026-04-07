@@ -303,6 +303,7 @@ function buildOpenAIChatKbMessages(
 export async function POST(request: Request) {
   const {
     sessionId,
+    conversationId,
     message,
     isKbTrigger = false,
     thinkingEnabled = false,
@@ -315,10 +316,15 @@ export async function POST(request: Request) {
   // Load session, history, and API keys
   const [session, messages, allKeys] = await Promise.all([
     prisma.chatSession.findUnique({ where: { id: sessionId } }),
-    prisma.message.findMany({
-      where: { chatSessionId: sessionId },
-      orderBy: { createdAt: 'asc' },
-    }),
+    conversationId
+      ? prisma.message.findMany({
+          where: { conversationId },
+          orderBy: { createdAt: 'asc' },
+        })
+      : prisma.message.findMany({
+          where: { sessionConv: { sessionId } },
+          orderBy: { createdAt: 'asc' },
+        }),
     prisma.apiKey.findMany(),
   ])
 
@@ -375,10 +381,11 @@ export async function POST(request: Request) {
           }
 
           // Save messages (skip user message if this is the KB start trigger)
+          const isFirstMessage = messages.length === 0
           const messageSaves: Promise<unknown>[] = [
             prisma.message.create({
               data: {
-                chatSessionId: sessionId,
+                conversationId: conversationId!,
                 role: 'assistant',
                 content: fullAssistantText,
                 toolHistory: kbToolHistory.length ? JSON.stringify(kbToolHistory) : null,
@@ -389,8 +396,20 @@ export async function POST(request: Request) {
           if (!isKbTrigger) {
             messageSaves.unshift(
               prisma.message.create({
-                data: { chatSessionId: sessionId, role: 'user', content: message.trim() },
+                data: { conversationId: conversationId!, role: 'user', content: message.trim() },
               })
+            )
+          }
+          if (conversationId && isFirstMessage && !isKbTrigger) {
+            messageSaves.push(
+              prisma.sessionConversation.update({
+                where: { id: conversationId },
+                data: { title: message.trim().slice(0, 40), updatedAt: new Date() },
+              })
+            )
+          } else if (conversationId) {
+            messageSaves.push(
+              prisma.sessionConversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } })
             )
           }
           await Promise.all(messageSaves)
@@ -527,18 +546,32 @@ export async function POST(request: Request) {
           const newMarkdown = applyDocOps(currentMarkdown, extractedOps)
           writeDoc(sessionId, newMarkdown)
 
-          await Promise.all([
-            prisma.message.create({ data: { chatSessionId: sessionId, role: 'user', content: message.trim() } }),
+          const isFirstMessage = messages.length === 0
+          const persistOps: Promise<unknown>[] = [
+            prisma.message.create({ data: { conversationId: conversationId!, role: 'user', content: message.trim() } }),
             prisma.message.create({
               data: {
-                chatSessionId: sessionId,
+                conversationId: conversationId!,
                 role: 'assistant',
                 content: fullAssistantText,
                 docOps: extractedOps.length ? JSON.stringify(extractedOps) : null,
               },
             }),
             prisma.chatSession.update({ where: { id: sessionId }, data: { updatedAt: new Date() } }),
-          ])
+          ]
+          if (conversationId && isFirstMessage) {
+            persistOps.push(
+              prisma.sessionConversation.update({
+                where: { id: conversationId },
+                data: { title: message.trim().slice(0, 40), updatedAt: new Date() },
+              })
+            )
+          } else if (conversationId) {
+            persistOps.push(
+              prisma.sessionConversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } })
+            )
+          }
+          await Promise.all(persistOps)
         }
 
         send({ type: 'done' })
