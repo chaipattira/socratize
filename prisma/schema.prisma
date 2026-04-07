@@ -11,28 +11,44 @@ datasource db {
 }
 
 model ChatSession {
-  id                  String    @id @default(cuid())
+  id                  String                @id @default(cuid())
   title               String
-  llmProvider         String    @default("anthropic")
-  model               String    @default("claude-sonnet-4-6")
-  extractionMode      String    @default("guided")
-  knowledgeFolderPath String    @default("")
+  llmProvider         String                @default("anthropic")
+  model               String                @default("claude-sonnet-4-6")
+  extractionMode      String                @default("guided")
+  knowledgeFolderPath String                @default("")
   messages            Message[]
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  conversations       SessionConversation[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 }
 
 model Message {
-  id            String      @id @default(cuid())
-  chatSessionId String
-  role          String // "user" | "assistant"
-  content       String
-  docOps        String? // JSON string of DocOp[]
-  toolHistory   String? // JSON string of intermediate tool call/result messages for KB sessions
-  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
-  createdAt     DateTime    @default(now())
+  id             String               @id @default(cuid())
+  chatSessionId  String?
+  conversationId String?
+  role           String // "user" | "assistant"
+  content        String
+  docOps         String? // JSON string of DocOp[]
+  toolHistory    String? // JSON string of intermediate tool call/result messages for KB sessions
+  chatSession    ChatSession?         @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  sessionConv    SessionConversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime             @default(now())
 
   @@index([chatSessionId])
+  @@index([conversationId])
+}
+
+model SessionConversation {
+  id        String      @id @default(cuid())
+  sessionId String
+  title     String      @default("New conversation")
+  messages  Message[]
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([sessionId])
 }
 
 model ApiKey {
@@ -43,23 +59,39 @@ model ApiKey {
 }
 
 model Sandbox {
-  id                  String           @id @default(cuid())
+  id                  String                @id @default(cuid())
   name                String
   skillFolderPaths    String // JSON array of absolute folder paths
   workspaceFolderPath String
   messages            SandboxMessage[]
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  conversations       SandboxConversation[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 }
 
 model SandboxMessage {
-  id          String   @id @default(cuid())
-  sandboxId   String
-  role        String // "user" | "assistant"
-  content     String
-  toolHistory String? // JSON: intermediate tool_use/tool_result MessageParam[] for this exchange
-  createdAt   DateTime @default(now())
-  sandbox     Sandbox  @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+  id             String               @id @default(cuid())
+  sandboxId      String?
+  conversationId String?
+  role           String // "user" | "assistant"
+  content        String
+  toolHistory    String? // JSON: intermediate tool_use/tool_result MessageParam[] for this exchange
+  createdAt      DateTime             @default(now())
+  sandbox        Sandbox?             @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+  sandboxConv    SandboxConversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([sandboxId])
+  @@index([conversationId])
+}
+
+model SandboxConversation {
+  id        String           @id @default(cuid())
+  sandboxId String
+  title     String           @default("New conversation")
+  messages  SandboxMessage[]
+  sandbox   Sandbox          @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@index([sandboxId])
 }
