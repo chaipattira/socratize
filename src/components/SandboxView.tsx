@@ -164,14 +164,19 @@ export function SandboxView({
   }, [sandboxId, activeConversationId])
 
   const handleRenameConversation = useCallback(async (id: string, title: string) => {
-    const res = await fetch(`/api/sandboxes/${sandboxId}/conversations/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
-    })
-    if (!res.ok) throw new Error('Failed to rename conversation')
+    const prevConvs = conversations
     setConversations(prev => prev.map(c => c.id === id ? { ...c, title } : c))
-  }, [sandboxId])
+    try {
+      await fetch(`/api/sandboxes/${sandboxId}/conversations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+    } catch {
+      // revert on error
+      setConversations(prevConvs)
+    }
+  }, [sandboxId, conversations])
 
   // Ref for passing quote handler from wrapper back to editor
   const onQuoteRef = useRef<((q: string) => void) | null>(null)
