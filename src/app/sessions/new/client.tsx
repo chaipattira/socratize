@@ -163,7 +163,7 @@ export function NewSessionClient() {
           ← Back
         </button>
 
-        <h1 className="font-display text-4xl font-normal text-stone-900 mb-10">New Session</h1>
+        <h1 className="font-display text-4xl font-normal text-stone-900 mb-10">New Interview</h1>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <div>

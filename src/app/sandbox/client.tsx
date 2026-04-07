@@ -30,7 +30,7 @@ export function SandboxDashboardClient({ initialSandboxes }: SandboxDashboardCli
         <span className="font-display text-xl italic text-wine tracking-wide">Socratize</span>
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="text-sm text-stone-500 hover:text-stone-800 transition">
-            Sessions
+            Interviews
           </Link>
           <Link href="/settings" className="text-sm text-stone-500 hover:text-stone-800 transition">
             Settings
@@ -89,6 +89,13 @@ export function SandboxDashboardClient({ initialSandboxes }: SandboxDashboardCli
           </div>
         )}
       </main>
+
+      <footer className="text-center pb-8 text-xs text-stone-400">
+        Questions? Say hi at{' '}
+        <a href="mailto:t.chaipat@columbia.edu" className="underline hover:text-stone-600 transition">
+          t.chaipat@columbia.edu
+        </a>
+      </footer>
     </div>
   )
 }

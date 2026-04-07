@@ -114,7 +114,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
   return (
     <div className="fixed inset-0 bg-stone-900/40 flex items-center justify-center z-50 overflow-y-auto py-8">
       <div className="bg-parchment border border-sepia rounded-xl p-8 w-full max-w-md mx-4 shadow-sm">
-        <h2 className="font-display text-2xl font-normal text-stone-900 mb-6">New Session</h2>
+        <h2 className="font-display text-2xl font-normal text-stone-900 mb-6">New Interview</h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>

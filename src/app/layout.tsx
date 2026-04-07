@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Cormorant_Garamond, Jost } from 'next/font/google'
+import { Cormorant_Garamond, Jost, Fraunces } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 
@@ -16,6 +16,12 @@ const jost = Jost({
   variable: '--font-jost',
 })
 
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['400', '600'],
+  variable: '--font-fraunces',
+})
+
 export const metadata: Metadata = {
   title: 'Socratize',
   description: 'Extract domain expertise into AI-ready knowledge files',
@@ -24,7 +30,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${cormorant.variable} ${jost.variable} font-sans bg-parchment text-stone-900`}>
+      <body className={`${cormorant.variable} ${jost.variable} ${fraunces.variable} font-sans bg-parchment text-stone-900`}>
         <Providers>{children}</Providers>
       </body>
     </html>

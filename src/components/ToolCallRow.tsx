@@ -40,6 +40,11 @@ function CommandScript({ command }: { command: string }) {
 }
 
 export function ToolCallRow({ name, input, done }: ToolCallRowProps) {
+  const filename = typeof input.filename === 'string' ? input.filename : ''
+  if ((name === 'read_skill_preview' || name === 'read_skill') && filename.startsWith('builtin/')) {
+    return null
+  }
+
   const label = (input.filename ?? input.section)
     ? String(input.filename ?? input.section)
     : ''

@@ -4,6 +4,9 @@ import { useDragResize } from '@/hooks/useDragResize'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { EditorView } from '@codemirror/view'
+import { LanguageDescription } from '@codemirror/language'
+import { languages } from '@codemirror/language-data'
+import type { Extension } from '@codemirror/state'
 import { isBinaryFile, isUnsupportedPreviewFile } from '@/lib/file-types'
 import { useSandboxChat, type SandboxMessage } from '@/hooks/useSandboxChat'
 import { SandboxFileTree } from './SandboxFileTree'
@@ -37,8 +40,16 @@ export function SandboxView({
   const activeFileRef = useRef(activeFile)
   useEffect(() => { activeFileRef.current = activeFile }, [activeFile])
 
+  useEffect(() => {
+    if (!activeFile?.filename) { setLangExtension([]); return }
+    const desc = LanguageDescription.matchFilename(languages, activeFile.filename)
+    if (!desc) { setLangExtension([]); return }
+    desc.load().then(lang => setLangExtension([lang])).catch(() => setLangExtension([]))
+  }, [activeFile?.filename])
+
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [isCommandRunning, setIsCommandRunning] = useState(false)
+  const [langExtension, setLangExtension] = useState<Extension[]>([])
 
   const [fileTreeWidth, setFileTreeWidth] = useState(192)
   const [chatWidth, setChatWidth] = useState(384)
@@ -266,7 +277,7 @@ export function SandboxView({
                 theme="light"
                 height="100%"
                 style={{ height: '100%' }}
-                extensions={selectionExtension}
+                extensions={[...langExtension, ...selectionExtension]}
                 basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }}
               />
               )

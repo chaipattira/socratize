@@ -37,14 +37,14 @@ export function DashboardClient({ initialSessions }: DashboardClientProps) {
       <main className="max-w-2xl mx-auto px-8 py-12">
         <div className="flex justify-between items-baseline mb-10">
           <div>
-            <h1 className="font-display text-4xl font-normal text-stone-900">Sessions</h1>
-            <p className="text-stone-400 text-sm mt-1">Your knowledge extraction sessions</p>
+            <h1 className="font-display text-4xl font-normal text-stone-900">Interviews</h1>
+            <p className="text-stone-400 text-sm mt-1">Your knowledge extraction interviews</p>
           </div>
           <button
             onClick={() => router.push('/sessions/new')}
             className="bg-wine hover:bg-wine-hover text-parchment text-sm font-medium px-5 py-2 rounded transition"
           >
-            New Session
+            New Interview
           </button>
         </div>
 
@@ -71,6 +71,13 @@ export function DashboardClient({ initialSessions }: DashboardClientProps) {
           </div>
         )}
       </main>
+
+      <footer className="text-center pb-8 text-xs text-stone-400">
+        Questions? Say hi at{' '}
+        <a href="mailto:t.chaipat@columbia.edu" className="underline hover:text-stone-600 transition">
+          t.chaipat@columbia.edu
+        </a>
+      </footer>
     </div>
   )
 }
