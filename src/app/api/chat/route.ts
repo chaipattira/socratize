@@ -577,13 +577,12 @@ export async function POST(request: Request) {
         send({ type: 'done' })
       } catch (err) {
         console.error('[chat] Error:', err)
-        const is401 = err instanceof Error && (err as any).status === 401
-        send({
-          type: 'error',
-          message: is401
-            ? 'Invalid API key. Check your key in Settings.'
-            : 'An error occurred. Please try again.',
-        })
+        const status = err instanceof Error ? (err as any).status : undefined
+        const apiMessage = err instanceof Error ? (err as any).error?.error?.message : undefined
+        const message = status === 401
+          ? 'Invalid API key. Check your key in Settings.'
+          : apiMessage ?? 'An error occurred. Please try again.'
+        send({ type: 'error', message })
       } finally {
         controller.close()
       }

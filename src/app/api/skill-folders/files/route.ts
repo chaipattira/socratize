@@ -41,6 +41,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Not a directory' }, { status: 400 })
   }
 
-  const files = collectAllFiles(folderPath).map(name => ({ name }))
+  const mdOnly = searchParams.get('mdOnly') === 'true'
+  const allFiles = collectAllFiles(folderPath)
+  const filtered = mdOnly ? allFiles.filter(f => f.endsWith('.md')) : allFiles
+  const files = filtered.map(name => ({ name }))
   return NextResponse.json({ files })
 }

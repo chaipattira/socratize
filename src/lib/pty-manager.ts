@@ -83,7 +83,7 @@ export async function runCommand(
     // Write: echo start sentinel, run command, force newline, echo end sentinel.
     // The forced newline ensures the end sentinel is always at the start of a line
     // even when the command's last output doesn't end with a newline (e.g. printf).
-    entry.process.write(`echo ${startSentinel}; ${command}; printf '\\n'; echo ${endSentinel}\r`)
+    entry.process.write(`echo ${startSentinel}\n${command}\nprintf '\\n'\necho ${endSentinel}\r`)
   })
 }
 

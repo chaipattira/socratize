@@ -46,7 +46,7 @@ export function NewSandboxClient() {
     setCustomPathError(null)
 
     try {
-      const res = await fetch(`/api/skill-folders/files?path=${encodeURIComponent(trimmed)}`)
+      const res = await fetch(`/api/skill-folders/files?path=${encodeURIComponent(trimmed)}&mdOnly=true`)
       if (!res.ok) {
         const err = await res.json()
         setCustomPathError(err.error ?? 'Directory not found')
