@@ -52,6 +52,7 @@ interface ChatPaneProps {
   activeConversationId: string
   onConversationSelect: (id: string) => void
   onNewConversation: () => void
+  onRenameConversation: (id: string, title: string) => Promise<void>
 }
 
 function ThinkingBlockView({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
@@ -95,6 +96,7 @@ export function ChatPane({
   activeConversationId,
   onConversationSelect,
   onNewConversation,
+  onRenameConversation,
 }: ChatPaneProps) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -158,11 +160,19 @@ export function ChatPane({
     <div className="flex flex-col h-full bg-parchment">
       <div className="px-4 py-2 bg-parchment border-b border-sepia text-xs flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
+          <button
+            onClick={onNewConversation}
+            disabled={isStreaming}
+            title="New conversation"
+            className="w-5 h-5 flex items-center justify-center rounded-full border border-sepia text-stone-400 hover:text-wine hover:border-wine/40 text-xs transition disabled:opacity-40 shrink-0"
+          >
+            +
+          </button>
           <ConversationPopover
             conversations={conversations}
             activeConversationId={activeConversationId}
             onSelect={onConversationSelect}
-            onNew={onNewConversation}
+            onRename={onRenameConversation}
             disabled={isStreaming}
           />
           {headerContent()}
