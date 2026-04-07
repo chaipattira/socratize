@@ -113,6 +113,20 @@ export function SessionView({
     setActiveConversationId(convId)
   }, [sessionId, activeConversationId])
 
+  const handleRenameConversation = useCallback(async (convId: string, title: string) => {
+    setConversations(prev => prev.map(c => c.id === convId ? { ...c, title } : c))
+    try {
+      await fetch(`/api/sessions/${sessionId}/conversations/${convId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+    } catch {
+      // revert on error
+      setConversations(prev => prev.map(c => c.id === convId ? { ...c, title: c.title } : c))
+    }
+  }, [sessionId])
+
   const handleMarkdownChange = useCallback(
     async (value: string) => {
       setMarkdown(value)
@@ -193,6 +207,7 @@ export function SessionView({
             conversations={conversations}
             onConversationSelect={handleConversationSelect}
             onNewConversation={handleNewConversation}
+            onRenameConversation={handleRenameConversation}
             onDocOps={handleDocOps}
             onFileUpdate={isKbSession ? handleFileUpdate : undefined}
             thinkingEnabled={thinkingEnabled}
@@ -217,6 +232,7 @@ interface SessionChatWrapperProps {
   conversations: Array<{ id: string; title: string; createdAt: string }>
   onConversationSelect: (id: string) => void
   onNewConversation: () => void
+  onRenameConversation: (convId: string, title: string) => Promise<void>
   onDocOps: (ops: DocOp[]) => void
   onFileUpdate?: (update: { filename: string; content: string }) => void
   thinkingEnabled: boolean
@@ -236,6 +252,7 @@ function SessionChatWrapper({
   conversations,
   onConversationSelect,
   onNewConversation,
+  onRenameConversation,
   onDocOps,
   onFileUpdate,
   thinkingEnabled,
@@ -288,6 +305,7 @@ function SessionChatWrapper({
       activeConversationId={conversationId}
       onConversationSelect={onConversationSelect}
       onNewConversation={onNewConversation}
+      onRenameConversation={onRenameConversation}
     />
   )
 }
