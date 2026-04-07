@@ -9,9 +9,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const session = await prisma.chatSession.findUnique({
     where: { id },
     include: {
-      messages: {
+      conversations: {
         orderBy: { createdAt: 'asc' },
-        select: { id: true, role: true, content: true },
+        select: { id: true, title: true, createdAt: true },
       },
     },
   })

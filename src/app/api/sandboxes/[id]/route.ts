@@ -12,7 +12,10 @@ export async function GET(
   const sandbox = await prisma.sandbox.findUnique({
     where: { id },
     include: {
-      messages: { orderBy: { createdAt: 'asc' } },
+      conversations: {
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, title: true, createdAt: true },
+      },
     },
   })
   if (!sandbox) return NextResponse.json({ error: 'Not found' }, { status: 404 })
