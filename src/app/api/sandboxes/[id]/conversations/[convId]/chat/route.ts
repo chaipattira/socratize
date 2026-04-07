@@ -25,12 +25,14 @@ async function executeSandboxTool(
 ): Promise<{ result: string; fileUpdate?: { filename: string; content: string } }> {
   if (name === 'list_skills') {
     const skills = listSkillsAcrossFolders(skillFolderPaths)
-    const filtered = enabledSkills ? skills.filter(s => enabledSkills.includes(s)) : skills
+    const filtered = enabledSkills
+      ? skills.filter(s => s.startsWith('builtin/') || enabledSkills.includes(s))
+      : skills
     return { result: filtered.length > 0 ? filtered.join('\n') : '(no skill files configured)' }
   }
   if (name === 'read_skill_preview' || name === 'read_skill') {
     const filename = input.filename as string
-    if (enabledSkills && !enabledSkills.includes(filename)) {
+    if (enabledSkills && !filename.startsWith('builtin/') && !enabledSkills.includes(filename)) {
       return { result: `Skill "${filename}" is currently disabled.` }
     }
   }
@@ -321,13 +323,12 @@ export async function POST(
         send({ type: 'done' })
       } catch (err) {
         console.error('[sandbox/conversations/chat] Error:', err)
-        const is401 = err instanceof Error && (err as any).status === 401
-        send({
-          type: 'error',
-          message: is401
-            ? 'Invalid API key. Check your key in Settings.'
-            : 'An error occurred. Please try again.',
-        })
+        const status = err instanceof Error ? (err as any).status : undefined
+        const apiMessage = err instanceof Error ? (err as any).error?.error?.message : undefined
+        const message = status === 401
+          ? 'Invalid API key. Check your key in Settings.'
+          : apiMessage ?? 'An error occurred. Please try again.'
+        send({ type: 'error', message })
       } finally {
         controller.close()
       }
