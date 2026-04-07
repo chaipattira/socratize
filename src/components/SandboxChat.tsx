@@ -53,6 +53,93 @@ function ThinkingBlockView({ text }: { text: string }) {
   )
 }
 
+function SkillsDropdown({
+  loadedSkills,
+  recentSkills,
+  enabledSkills,
+  onSkillToggle,
+  onReInject,
+  initStatus,
+}: {
+  loadedSkills: string[]
+  recentSkills: string[]
+  enabledSkills: Set<string>
+  onSkillToggle: (skill: string) => void
+  onReInject: () => void
+  initStatus: 'idle' | 'loading' | 'done' | 'error'
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  if (initStatus === 'idle') return null
+  if (initStatus === 'loading') {
+    return <span className="text-xs text-stone-400 italic animate-pulse">Loading skills...</span>
+  }
+  if (initStatus === 'error') {
+    return (
+      <span className="flex items-center gap-2">
+        <span className="text-xs text-wine">Skills not loaded</span>
+        <button onClick={onReInject} className="text-xs text-wine underline hover:text-wine-hover">retry</button>
+      </span>
+    )
+  }
+  if (loadedSkills.length === 0) {
+    return <span className="text-xs text-stone-400 italic">No skills</span>
+  }
+
+  const enabledCount = loadedSkills.filter(s => enabledSkills.has(s)).length
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1 text-xs text-stone-500 hover:text-stone-800 border border-sepia hover:border-stone-400 px-2 py-0.5 rounded transition"
+        title="Manage skills"
+      >
+        <span>Skills ({enabledCount}/{loadedSkills.length})</span>
+        <span className="text-stone-300 text-[10px]">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-1 z-50 bg-parchment border border-sepia rounded shadow-md min-w-[180px] max-w-[260px] max-h-64 overflow-y-auto">
+          {loadedSkills.map(skill => {
+            const isEnabled = enabledSkills.has(skill)
+            const isRecent = recentSkills.includes(skill)
+            return (
+              <button
+                key={skill}
+                onClick={() => onSkillToggle(skill)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-vellum transition"
+                title={isEnabled ? 'Click to disable' : 'Click to enable'}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isEnabled ? 'bg-wine' : 'bg-stone-200'}`} />
+                <span className={`font-mono truncate ${
+                  isEnabled
+                    ? isRecent ? 'text-wine' : 'text-stone-700'
+                    : 'text-stone-300 line-through'
+                }`}>
+                  {skill}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface SandboxChatProps {
   messages: SandboxMessage[]
   streamingText: string
@@ -75,6 +162,7 @@ interface SandboxChatProps {
   activeConversationId: string
   onConversationSelect: (id: string) => void
   onNewConversation: () => void
+  onRenameConversation: (id: string, title: string) => Promise<void>
 }
 
 
@@ -100,6 +188,7 @@ export function SandboxChat({
   activeConversationId,
   onConversationSelect,
   onNewConversation,
+  onRenameConversation,
 }: SandboxChatProps) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -139,61 +228,34 @@ export function SandboxChat({
     ]),
   ], [])
 
-  const skillsSection = useMemo(() => {
-    if (initStatus === 'idle') return null
-    if (initStatus === 'loading') {
-      return <span className="text-xs text-stone-400 italic animate-pulse">Loading skills...</span>
-    }
-    if (initStatus === 'error') {
-      return (
-        <span className="flex items-center gap-2">
-          <span className="text-xs text-wine">Skills not loaded</span>
-          <button onClick={onReInject} className="text-xs text-wine underline hover:text-wine-hover">retry</button>
-        </span>
-      )
-    }
-    if (loadedSkills.length === 0) {
-      return <span className="text-xs text-stone-400 italic">No skills configured</span>
-    }
-    return (
-      <div className="flex items-center gap-1 flex-wrap">
-        {loadedSkills.map(skill => {
-          const isEnabled = enabledSkills.has(skill)
-          const isRecent = recentSkills.includes(skill)
-          return (
-            <button
-              key={skill}
-              onClick={() => onSkillToggle(skill)}
-              title={isEnabled ? 'Click to disable this skill' : 'Click to enable this skill'}
-              className={`text-xs px-1.5 py-0.5 rounded font-mono transition border ${
-                !isEnabled
-                  ? 'bg-vellum text-stone-300 border-sepia line-through opacity-50'
-                  : isRecent
-                  ? 'bg-wine/10 text-wine border-wine/20'
-                  : 'bg-vellum text-stone-500 border-sepia hover:border-stone-400'
-              }`}
-            >
-              {skill}
-            </button>
-          )
-        })}
-      </div>
-    )
-  }, [initStatus, loadedSkills, recentSkills, enabledSkills, onSkillToggle, onReInject])
-
   return (
     <div className="flex flex-col h-full bg-parchment">
       {/* Header: conversation switcher + skills + thinking toggle */}
       <div className="px-4 py-2 bg-parchment border-b border-sepia flex items-center justify-between gap-2 min-h-[40px]">
         <div className="flex-1 min-w-0 flex items-center gap-2">
+          <button
+            onClick={onNewConversation}
+            disabled={isStreaming}
+            title="New conversation"
+            className="w-5 h-5 flex items-center justify-center rounded-full border border-sepia text-stone-400 hover:text-wine hover:border-wine/40 text-xs transition disabled:opacity-40 shrink-0"
+          >
+            +
+          </button>
           <ConversationPopover
             conversations={conversations}
             activeConversationId={activeConversationId}
             onSelect={onConversationSelect}
-            onNew={onNewConversation}
+            onRename={onRenameConversation}
             disabled={isStreaming}
           />
-          <div className="flex-1 min-w-0">{skillsSection}</div>
+          <SkillsDropdown
+            loadedSkills={loadedSkills}
+            recentSkills={recentSkills}
+            enabledSkills={enabledSkills}
+            onSkillToggle={onSkillToggle}
+            onReInject={onReInject}
+            initStatus={initStatus}
+          />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
