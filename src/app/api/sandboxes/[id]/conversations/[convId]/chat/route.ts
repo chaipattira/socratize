@@ -214,24 +214,28 @@ async function runOpenAILoop(
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; convId: string }> }
 ) {
-  const { id } = await params
+  const { id, convId } = await params
   const { message, thinkingEnabled = false, enabledSkills = null } = await request.json()
 
   if (!message || typeof message !== 'string') {
     return NextResponse.json({ error: 'message is required' }, { status: 400 })
   }
 
-  const [sandbox, allKeys] = await Promise.all([
-    prisma.sandbox.findUnique({
-      where: { id },
-      include: { messages: { orderBy: { createdAt: 'asc' } } },
+  const [conversation, allKeys] = await Promise.all([
+    prisma.sandboxConversation.findUnique({
+      where: { id: convId },
+      include: {
+        sandbox: true,
+        messages: { orderBy: { createdAt: 'asc' } },
+      },
     }),
     prisma.apiKey.findMany(),
   ])
 
-  if (!sandbox) return NextResponse.json({ error: 'Sandbox not found' }, { status: 404 })
+  if (!conversation) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+  const sandbox = conversation.sandbox
 
   const anthropicKey = allKeys.find(k => k.provider === 'anthropic')
   const openaiKey = allKeys.find(k => k.provider === 'openai')
@@ -255,7 +259,7 @@ export async function POST(
 
         // Build LLM messages from history + current
         const llmMessages = [
-          ...buildLlmHistory(sandbox.messages),
+          ...buildLlmHistory(conversation.messages),
           { role: 'user' as const, content: currentMessage },
         ]
 
@@ -290,23 +294,33 @@ export async function POST(
           toolDelta = result.toolDelta
         }
 
-        // Persist user message + assistant response (with tool history if any)
+        // Persist user message + assistant response scoped to conversation
+        const isFirstMessage = conversation.messages.length === 0
         await prisma.sandboxMessage.createMany({
           data: [
-            { sandboxId: id, role: 'user', content: currentMessage },
+            { conversationId: convId, role: 'user', content: currentMessage },
             {
-              sandboxId: id,
+              conversationId: convId,
               role: 'assistant',
               content: assistantText,
               toolHistory: toolDelta.length > 0 ? JSON.stringify(toolDelta) : null,
             },
           ],
         })
+        // Auto-title the conversation on first message
+        if (isFirstMessage) {
+          await prisma.sandboxConversation.update({
+            where: { id: convId },
+            data: { title: currentMessage.slice(0, 40).trim(), updatedAt: new Date() },
+          })
+        } else {
+          await prisma.sandboxConversation.update({ where: { id: convId }, data: { updatedAt: new Date() } })
+        }
         await prisma.sandbox.update({ where: { id }, data: { updatedAt: new Date() } })
 
         send({ type: 'done' })
       } catch (err) {
-        console.error('[sandbox/chat] Error:', err)
+        console.error('[sandbox/conversations/chat] Error:', err)
         const is401 = err instanceof Error && (err as any).status === 401
         send({
           type: 'error',
