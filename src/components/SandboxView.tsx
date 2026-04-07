@@ -365,15 +365,16 @@ function SandboxChatWrapper({
   }, [onRegisterQuoteHandler])
 
   const handleSkillsLoaded = useCallback((skills: string[]) => {
+    const userSkills = skills.filter(s => !s.startsWith('builtin/'))
     setLoadedSkills(prev => {
       const merged = [...prev]
-      for (const s of skills) if (!merged.includes(s)) merged.push(s)
+      for (const s of userSkills) if (!merged.includes(s)) merged.push(s)
       return merged.sort()
     })
-    setRecentSkills(skills)
+    setRecentSkills(userSkills)
     setEnabledSkills(prev => {
       const next = new Set(prev)
-      for (const s of skills) next.add(s)
+      for (const s of userSkills) next.add(s)
       return next
     })
   }, [])
