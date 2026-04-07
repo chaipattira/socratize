@@ -12,6 +12,8 @@ import { SandboxTerminal } from './SandboxTerminal'
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
 
+const EXTRACTABLE_EXTS = new Set(['.pdf', '.docx', '.pptx', '.xlsx'])
+
 interface SandboxViewProps {
   sandboxId: string
   name: string
@@ -126,6 +128,23 @@ export function SandboxView({
   }, [])
 
   const handleFileClick = useCallback(async (filename: string) => {
+    const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase()
+    const companionName = `${filename}.txt`
+
+    if (EXTRACTABLE_EXTS.has(ext) && !files.includes(companionName)) {
+      try {
+        const extractRes = await fetch(
+          `/api/sandboxes/${sandboxId}/files/${encodeURIComponent(filename)}/extract`,
+          { method: 'POST' }
+        )
+        if (extractRes.ok) {
+          setFiles(prev => [...prev, companionName].sort())
+        }
+      } catch {
+        // Silent failure — companion just won't appear
+      }
+    }
+
     try {
       const res = await fetch(`/api/sandboxes/${sandboxId}/files/${encodeURIComponent(filename)}`)
       if (!res.ok) return
@@ -134,7 +153,7 @@ export function SandboxView({
     } catch {
       // Silently ignore — file pane will just not update
     }
-  }, [sandboxId])
+  }, [sandboxId, files])
 
   const handleFilesUploaded = useCallback((filenames: string[]) => {
     setFiles(prev => {
@@ -253,16 +272,7 @@ export function SandboxView({
               isBinaryFile(activeFile.filename) ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
                   <p className="text-sm text-stone-400 font-medium">Preview not available</p>
-                  {activeFile.filename.match(/\.(pdf|docx|pptx|xlsx)$/i) ? (
-                    <p className="text-xs text-stone-300 mt-1">
-                      Readable content extracted to{' '}
-                      <span className="font-mono">{activeFile.filename}.txt</span>
-                    </p>
-                  ) : (
-                    <p className="text-xs text-stone-300 mt-1">
-                      Ask the agent to load this file using R (haven::read_sas)
-                    </p>
-                  )}
+                  <p className="text-xs text-stone-300 mt-1">Ask the agent to load this file.</p>
                 </div>
               ) : (
                 <CodeMirror
