@@ -34,6 +34,8 @@ export function NewSessionClient() {
   const [folderError, setFolderError] = useState<string | null>(null)
   const [isCheckingFolder, setIsCheckingFolder] = useState(false)
   const [folderVerified, setFolderVerified] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -47,6 +49,13 @@ export function NewSessionClient() {
     setFolderError(null)
     setFolderVerified(false)
     setFolderFiles([])
+  }
+
+  const refreshFolderFiles = async (trimmed: string) => {
+    const res = await fetch(`/api/skill-folders/files?path=${encodeURIComponent(trimmed)}`)
+    if (!res.ok) return
+    const { files } = await res.json() as { files: { name: string }[] }
+    setFolderFiles(files.map(f => f.name))
   }
 
   const handleAddFolder = async () => {
@@ -67,6 +76,10 @@ export function NewSessionClient() {
       const { files } = await res.json() as { files: { name: string }[] }
       setFolderFiles(files.map(f => f.name))
       setFolderVerified(true)
+
+      // Extract existing binary files, then refresh to pick up new companions
+      await fetch(`/api/skill-folders/extract?path=${encodeURIComponent(trimmed)}`, { method: 'POST' })
+      await refreshFolderFiles(trimmed)
     } catch {
       setFolderError('Failed to check directory')
     } finally {
@@ -160,34 +173,45 @@ export function NewSessionClient() {
                 {isCheckingFolder ? '...' : 'Add'}
               </button>
             </div>
-            <p className="text-xs text-stone-400 mt-1">Absolute path to a folder of .md files. The folder can be empty.</p>
+            <p className="text-xs text-stone-400 mt-1">Absolute path to a folder of files. The folder can be empty.</p>
 
             {folderError && (
               <p className="text-xs text-wine mt-1">{folderError}</p>
             )}
 
-            {folderVerified && (
+            {folderVerified && extractionMode === 'socratize' && (
               <div className="mt-2 rounded border border-sepia bg-parchment overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-sepia bg-vellum">
                   <span className="text-xs text-stone-500 font-medium">
-                    {folderFiles.length === 0 ? 'Empty folder' : `${folderFiles.length} .md file${folderFiles.length !== 1 ? 's' : ''}`}
+                    {folderFiles.filter(f => f.endsWith('.md')).length === 0
+                      ? 'Empty folder'
+                      : `${folderFiles.filter(f => f.endsWith('.md')).length} .md file${folderFiles.filter(f => f.endsWith('.md')).length !== 1 ? 's' : ''}`}
                   </span>
                   <span className="text-xs text-wine/60">✓ Found</span>
                 </div>
-                {folderFiles.length > 0 && (
+                {folderFiles.filter(f => f.endsWith('.md')).length > 0 && (
                   <div className="max-h-40 overflow-y-auto py-1">
-                    {folderFiles.map(f => (
+                    {folderFiles.filter(f => f.endsWith('.md')).map(f => (
                       <div key={f} className="px-3 py-1 text-xs text-stone-400 font-mono hover:text-stone-600 transition">
                         {f}
                       </div>
                     ))}
                   </div>
                 )}
-                {folderFiles.length === 0 && (
+                {folderFiles.filter(f => f.endsWith('.md')).length === 0 && (
                   <div className="px-3 py-2 text-xs text-stone-400 italic">
                     No .md files yet — the agent will create them.
                   </div>
                 )}
+              </div>
+            )}
+
+            {folderVerified && extractionMode !== 'socratize' && (
+              <div className="mt-2 flex items-center justify-between px-3 py-1.5 rounded border border-sepia bg-vellum">
+                <span className="text-xs text-stone-500 font-medium">
+                  {folderFiles.length === 0 ? 'Empty folder' : `${folderFiles.length} file${folderFiles.length !== 1 ? 's' : ''} found`}
+                </span>
+                <span className="text-xs text-wine/60">✓ Found</span>
               </div>
             )}
           </div>
