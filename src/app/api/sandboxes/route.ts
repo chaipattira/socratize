@@ -9,7 +9,7 @@ export async function GET() {
     select: {
       id: true,
       name: true,
-      skillFolderPaths: true,
+      skillFolderPath: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -18,17 +18,21 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { name, skillFolderPaths = [], workspaceFolderPath: customWorkspacePath } = await request.json()
+  const { name, skillFolderPath = '', workspaceFolderPath: customWorkspacePath } = await request.json()
 
   if (!name?.trim()) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 })
   }
 
-  // Validate skill folder paths exist
-  const validatedPaths: string[] = []
-  for (const p of skillFolderPaths) {
-    if (typeof p === 'string' && fs.existsSync(p) && fs.statSync(p).isDirectory()) {
-      validatedPaths.push(p)
+  // Validate skill folder path if provided
+  let validatedSkillPath = ''
+  if (skillFolderPath && typeof skillFolderPath === 'string') {
+    const trimmed = skillFolderPath.trim()
+    if (trimmed) {
+      if (!fs.existsSync(trimmed) || !fs.statSync(trimmed).isDirectory()) {
+        return NextResponse.json({ error: 'Skill folder not found or is not a directory' }, { status: 400 })
+      }
+      validatedSkillPath = trimmed
     }
   }
 
@@ -48,8 +52,8 @@ export async function POST(request: Request) {
   const sandbox = await prisma.sandbox.create({
     data: {
       name: name.trim(),
-      skillFolderPaths: JSON.stringify(validatedPaths),
-      workspaceFolderPath: resolvedWorkspacePath ?? '', // filled in after we have the id if managed
+      skillFolderPath: validatedSkillPath,
+      workspaceFolderPath: resolvedWorkspacePath ?? '',
     },
   })
 

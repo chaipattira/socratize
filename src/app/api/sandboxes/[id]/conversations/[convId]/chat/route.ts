@@ -246,7 +246,7 @@ export async function POST(
     return NextResponse.json({ error: 'No API key found. Add one in Settings.' }, { status: 400 })
   }
 
-  const skillFolderPaths: string[] = JSON.parse(sandbox.skillFolderPaths || '[]')
+  const skillFolderPaths: string[] = sandbox.skillFolderPath ? [sandbox.skillFolderPath] : []
   const systemPrompt = buildSandboxSystemPrompt()
 
   const encoder = new TextEncoder()
