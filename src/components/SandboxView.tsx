@@ -19,6 +19,8 @@ interface SandboxViewProps {
   name: string
   initialMessages: SandboxMessage[]
   initialFiles: string[]
+  initialConversations: Array<{ id: string; title: string; createdAt: string }>
+  initialConversationId: string
 }
 
 export function SandboxView({
@@ -26,6 +28,8 @@ export function SandboxView({
   name,
   initialMessages,
   initialFiles,
+  initialConversations,
+  initialConversationId,
 }: SandboxViewProps) {
   const router = useRouter()
   const [files, setFiles] = useState<string[]>(initialFiles)
@@ -33,13 +37,6 @@ export function SandboxView({
   const activeFileRef = useRef(activeFile)
   useEffect(() => { activeFileRef.current = activeFile }, [activeFile])
 
-  const [loadedSkills, setLoadedSkills] = useState<string[]>([])
-  const [recentSkills, setRecentSkills] = useState<string[]>([])
-  // All skills start enabled; user can toggle individually
-  const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set())
-
-  const [thinkingEnabled, setThinkingEnabled] = useState(false)
-  const [activeQuote, setActiveQuote] = useState('')
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [isCommandRunning, setIsCommandRunning] = useState(false)
 
@@ -80,52 +77,6 @@ export function SandboxView({
       // Silent failure — file tree will just not update
     }
   }, [sandboxId])
-
-  const handleSkillsLoaded = useCallback((skills: string[]) => {
-    setLoadedSkills(prev => {
-      const merged = [...prev]
-      for (const s of skills) {
-        if (!merged.includes(s)) merged.push(s)
-      }
-      return merged.sort()
-    })
-    setRecentSkills(skills)
-    // Enable newly loaded skills by default
-    setEnabledSkills(prev => {
-      const next = new Set(prev)
-      for (const s of skills) next.add(s)
-      return next
-    })
-  }, [])
-
-  const {
-    messages,
-    streamingText,
-    streamingToolCalls,
-    isStreaming,
-    error,
-    initStatus,
-    triggerInit,
-    sendMessage,
-    stopStreaming,
-  } = useSandboxChat({
-    sandboxId,
-    initialMessages,
-    onFileUpdate: handleFileUpdate,
-    onSkillsLoaded: handleSkillsLoaded,
-    onCommandRun: handleCommandRun,
-    onCommandComplete: handleCommandComplete,
-  })
-
-  const hasAutoTriggered = useRef(false)
-  useEffect(() => {
-    if (hasAutoTriggered.current) return
-    hasAutoTriggered.current = true
-    if (initialMessages.length === 0) {
-      triggerInit()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const handleFileClick = useCallback(async (filename: string) => {
     const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase()
@@ -180,26 +131,40 @@ export function SandboxView({
     }
   }, [sandboxId])
 
-  const handleReInject = useCallback(() => {
-    setRecentSkills([])
-    triggerInit()
-  }, [triggerInit])
+  // Conversations state
+  const [conversations, setConversations] = useState(initialConversations)
+  const [activeConversationId, setActiveConversationId] = useState(initialConversationId)
+  const [activeConversationMessages, setActiveConversationMessages] = useState<SandboxMessage[]>(initialMessages)
 
-  const handleSkillToggle = useCallback((skill: string) => {
-    setEnabledSkills(prev => {
-      const next = new Set(prev)
-      if (next.has(skill)) next.delete(skill)
-      else next.add(skill)
-      return next
-    })
-  }, [])
+  const handleNewConversation = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/sandboxes/${sandboxId}/conversations`, { method: 'POST' })
+      if (!res.ok) return
+      const { conversation } = await res.json() as { conversation: { id: string; title: string; createdAt: string } }
+      setConversations(prev => [...prev, conversation])
+      setActiveConversationMessages([])
+      setActiveConversationId(conversation.id)
+    } catch {
+      // silent — user stays on current conversation
+    }
+  }, [sandboxId])
 
-  const handleSend = useCallback((content: string) => {
-    sendMessage(content, {
-      thinkingEnabled,
-      enabledSkills: Array.from(enabledSkills),
-    })
-  }, [sendMessage, thinkingEnabled, enabledSkills])
+  const handleConversationSelect = useCallback(async (convId: string) => {
+    if (convId === activeConversationId) return
+    try {
+      const res = await fetch(`/api/sandboxes/${sandboxId}/conversations`)
+      if (!res.ok) return
+      const { conversations: all } = await res.json() as { conversations: Array<{ id: string; title: string; createdAt: string }> }
+      setConversations(all)
+    } catch {
+      // continue with existing list
+    }
+    setActiveConversationMessages([])
+    setActiveConversationId(convId)
+  }, [sandboxId, activeConversationId])
+
+  // Ref for passing quote handler from wrapper back to editor
+  const onQuoteRef = useRef<((q: string) => void) | null>(null)
 
   // Selection listener extension for CodeMirror
   const selectionExtension = useMemo(() => [
@@ -209,7 +174,7 @@ export function SandboxView({
       if (sel.empty) return // don't clear on deselect — user may have moved to chat
       const text = update.state.doc.sliceString(sel.from, sel.to)
       const filename = activeFileRef.current?.filename
-      setActiveQuote(filename ? `[${filename}]\n${text}` : text)
+      onQuoteRef.current?.(filename ? `[${filename}]\n${text}` : text)
     }),
   ], [])
 
@@ -270,29 +235,29 @@ export function SandboxView({
           <div className="flex-1 min-h-0 overflow-hidden">
             {activeFile ? (
               isBinaryFile(activeFile.filename) ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-                  <p className="text-sm text-stone-400 font-medium">Preview not available</p>
-                  <p className="text-xs text-stone-300 mt-1">Ask the agent to load this file.</p>
-                </div>
+              <div className="h-full flex flex-col items-center justify-center text-center px-8">
+                <p className="text-sm text-stone-400 font-medium">Preview not available</p>
+                <p className="text-xs text-stone-300 mt-1">Ask the agent to load this file.</p>
+              </div>
               ) : isUnsupportedPreviewFile(activeFile.filename) ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-                  <p className="text-sm text-stone-400 font-medium">Preview not available</p>
-                  <p className="text-xs text-stone-300 mt-1">File not supported</p>
-                </div>
+              <div className="h-full flex flex-col items-center justify-center text-center px-8">
+                <p className="text-sm text-stone-400 font-medium">Preview not available</p>
+                <p className="text-xs text-stone-300 mt-1">File not supported</p>
+              </div>
               ) : (
-                <CodeMirror
-                  value={activeFile.content}
-                  onChange={handleFileChange}
-                  theme="light"
-                  height="100%"
-                  style={{ height: '100%' }}
-                  extensions={selectionExtension}
-                  basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }}
-                />
+              <CodeMirror
+                value={activeFile.content}
+                onChange={handleFileChange}
+                theme="light"
+                height="100%"
+                style={{ height: '100%' }}
+                extensions={selectionExtension}
+                basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }}
+              />
               )
             ) : (
               <div className="flex items-center justify-center h-full text-stone-400 text-sm">
-                Click a file to open it
+              Click a file to open it
               </div>
             )}
           </div>
@@ -304,24 +269,18 @@ export function SandboxView({
         />
         {/* Right: chat */}
         <div style={{ width: chatWidth }} className="shrink-0 flex flex-col min-h-0">
-          <SandboxChat
-            messages={messages}
-            streamingText={streamingText}
-            streamingToolCalls={streamingToolCalls}
-            isStreaming={isStreaming}
-            error={error}
-            initStatus={initStatus}
-            loadedSkills={loadedSkills}
-            recentSkills={recentSkills}
-            enabledSkills={enabledSkills}
-            onSkillToggle={handleSkillToggle}
-            thinkingEnabled={thinkingEnabled}
-            onThinkingToggle={() => setThinkingEnabled(v => !v)}
-            quotedText={activeQuote}
-            onClearQuote={() => setActiveQuote('')}
-            onSend={handleSend}
-            onReInject={handleReInject}
-            onStop={stopStreaming}
+          <SandboxChatWrapper
+            key={activeConversationId}
+            sandboxId={sandboxId}
+            conversationId={activeConversationId}
+            initialMessages={activeConversationMessages}
+            conversations={conversations}
+            onConversationSelect={handleConversationSelect}
+            onNewConversation={handleNewConversation}
+            onFileUpdate={handleFileUpdate}
+            onCommandRun={handleCommandRun}
+            onCommandComplete={handleCommandComplete}
+            onRegisterQuoteHandler={(fn) => { onQuoteRef.current = fn }}
           />
         </div>
       </div>
@@ -349,5 +308,127 @@ export function SandboxView({
         </div>
       )}
     </div>
+  )
+}
+
+interface SandboxChatWrapperProps {
+  sandboxId: string
+  conversationId: string
+  initialMessages: SandboxMessage[]
+  conversations: Array<{ id: string; title: string; createdAt: string }>
+  onConversationSelect: (id: string) => void
+  onNewConversation: () => void
+  onFileUpdate: (update: { filename: string; content: string }) => void
+  onCommandRun: () => void
+  onCommandComplete: () => void
+  onRegisterQuoteHandler: (fn: (q: string) => void) => void
+}
+
+function SandboxChatWrapper({
+  sandboxId,
+  conversationId,
+  initialMessages,
+  conversations,
+  onConversationSelect,
+  onNewConversation,
+  onFileUpdate,
+  onCommandRun,
+  onCommandComplete,
+  onRegisterQuoteHandler,
+}: SandboxChatWrapperProps) {
+  const [loadedSkills, setLoadedSkills] = useState<string[]>([])
+  const [recentSkills, setRecentSkills] = useState<string[]>([])
+  const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set())
+  const [thinkingEnabled, setThinkingEnabled] = useState(false)
+  const [activeQuote, setActiveQuote] = useState('')
+
+  useEffect(() => {
+    onRegisterQuoteHandler((q: string) => setActiveQuote(q))
+  }, [onRegisterQuoteHandler])
+
+  const handleSkillsLoaded = useCallback((skills: string[]) => {
+    setLoadedSkills(prev => {
+      const merged = [...prev]
+      for (const s of skills) if (!merged.includes(s)) merged.push(s)
+      return merged.sort()
+    })
+    setRecentSkills(skills)
+    setEnabledSkills(prev => {
+      const next = new Set(prev)
+      for (const s of skills) next.add(s)
+      return next
+    })
+  }, [])
+
+  const handleSkillToggle = useCallback((skill: string) => {
+    setEnabledSkills(prev => {
+      const next = new Set(prev)
+      if (next.has(skill)) next.delete(skill)
+      else next.add(skill)
+      return next
+    })
+  }, [])
+
+  const {
+    messages,
+    streamingText,
+    streamingToolCalls,
+    isStreaming,
+    error,
+    initStatus,
+    triggerInit,
+    sendMessage,
+    stopStreaming,
+  } = useSandboxChat({
+    sandboxId,
+    conversationId,
+    initialMessages,
+    onFileUpdate,
+    onSkillsLoaded: handleSkillsLoaded,
+    onCommandRun,
+    onCommandComplete,
+  })
+
+  const hasAutoTriggered = useRef(false)
+  useEffect(() => {
+    if (hasAutoTriggered.current) return
+    hasAutoTriggered.current = true
+    if (initialMessages.length === 0) triggerInit()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleSend = useCallback((content: string) => {
+    sendMessage(content, { thinkingEnabled, enabledSkills: Array.from(enabledSkills) })
+  }, [sendMessage, thinkingEnabled, enabledSkills])
+
+  const handleReInject = useCallback(() => {
+    setRecentSkills([])
+    triggerInit()
+  }, [triggerInit])
+
+  return (
+    <SandboxChat
+      messages={messages}
+      streamingText={streamingText}
+      streamingToolCalls={streamingToolCalls}
+      isStreaming={isStreaming}
+      error={error}
+      initStatus={initStatus}
+      loadedSkills={loadedSkills}
+      recentSkills={recentSkills}
+      enabledSkills={enabledSkills}
+      onSkillToggle={handleSkillToggle}
+      thinkingEnabled={thinkingEnabled}
+      onThinkingToggle={() => setThinkingEnabled(v => !v)}
+      quotedText={activeQuote}
+      onClearQuote={() => setActiveQuote('')}
+      onSend={handleSend}
+      onReInject={handleReInject}
+      onStop={stopStreaming}
+      conversations={conversations}
+      activeConversationId={conversationId}
+      onConversationSelect={onConversationSelect}
+      onNewConversation={onNewConversation}
+    />
   )
 }

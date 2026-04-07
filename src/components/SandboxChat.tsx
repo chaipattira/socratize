@@ -8,6 +8,7 @@ import { EditorView, keymap } from '@codemirror/view'
 import { insertNewlineAndIndent } from '@codemirror/commands'
 import type { SandboxMessage } from '@/hooks/useSandboxChat'
 import { ToolCallRow } from './ToolCallRow'
+import { ConversationPopover } from './ConversationPopover'
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
 
@@ -70,6 +71,10 @@ interface SandboxChatProps {
   onSend: (message: string) => void
   onReInject: () => void
   onStop: () => void
+  conversations: Array<{ id: string; title: string; createdAt: string }>
+  activeConversationId: string
+  onConversationSelect: (id: string) => void
+  onNewConversation: () => void
 }
 
 
@@ -91,6 +96,10 @@ export function SandboxChat({
   onSend,
   onReInject,
   onStop,
+  conversations,
+  activeConversationId,
+  onConversationSelect,
+  onNewConversation,
 }: SandboxChatProps) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -174,9 +183,18 @@ export function SandboxChat({
 
   return (
     <div className="flex flex-col h-full bg-parchment">
-      {/* Header: skills + re-inject + thinking toggle */}
+      {/* Header: conversation switcher + skills + thinking toggle */}
       <div className="px-4 py-2 bg-parchment border-b border-sepia flex items-center justify-between gap-2 min-h-[40px]">
-        <div className="flex-1 min-w-0">{skillsSection}</div>
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <ConversationPopover
+            conversations={conversations}
+            activeConversationId={activeConversationId}
+            onSelect={onConversationSelect}
+            onNew={onNewConversation}
+            disabled={isStreaming}
+          />
+          <div className="flex-1 min-w-0">{skillsSection}</div>
+        </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onThinkingToggle}
