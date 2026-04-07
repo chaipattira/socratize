@@ -233,6 +233,11 @@ export function ChatPane({
           </div>
         )}
 
+        {messages.length >= 20 && (
+          <div className="text-xs text-stone-400 bg-wine/5 border border-wine/20 rounded px-3 py-2 text-center">
+            This conversation is getting long. For best results, consider starting a fresh one.
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
