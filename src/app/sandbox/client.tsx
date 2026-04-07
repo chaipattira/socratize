@@ -6,7 +6,7 @@ import Link from 'next/link'
 interface SandboxSummary {
   id: string
   name: string
-  skillFolderPaths: string
+  skillFolderPath: string
   createdAt: string
   updatedAt: string
 }
@@ -60,9 +60,9 @@ export function SandboxDashboardClient({ initialSandboxes }: SandboxDashboardCli
         ) : (
           <div className="divide-y divide-sepia">
             {sandboxes.map(s => {
-              let skillPaths: string[] = []
-              try { skillPaths = JSON.parse(s.skillFolderPaths || '[]') } catch { /* malformed — treat as empty */ }
-              const skillCount = skillPaths.length
+              const folderName = s.skillFolderPath
+                ? s.skillFolderPath.split('/').pop() ?? s.skillFolderPath
+                : null
               return (
                 <div
                   key={s.id}
@@ -74,7 +74,7 @@ export function SandboxDashboardClient({ initialSandboxes }: SandboxDashboardCli
                   >
                     <div className="font-display text-lg font-normal text-stone-900 group-hover:text-wine transition">{s.name}</div>
                     <div className="text-xs text-stone-400 mt-0.5">
-                      {skillCount} skill folder{skillCount !== 1 ? 's' : ''} · Updated {new Date(s.updatedAt).toLocaleDateString()}
+                      {folderName ? `${folderName} · ` : ''}Updated {new Date(s.updatedAt).toLocaleDateString()}
                     </div>
                   </button>
                   <button

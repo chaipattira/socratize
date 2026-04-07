@@ -2,25 +2,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-interface SkillFolder {
-  id: string
-  title: string
-  path: string
-  mdFiles: string[]
-}
-
 export function NewSandboxClient() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Skill folders
-  const [customPath, setCustomPath] = useState('')
-  const [addedFolders, setAddedFolders] = useState<SkillFolder[]>([])
-  const [selectedPaths, setSelectedPaths] = useState<string[]>([])
-  const [customPathError, setCustomPathError] = useState<string | null>(null)
-  const [isCheckingPath, setIsCheckingPath] = useState(false)
+  // Single skill folder
+  const [skillFolderPath, setSkillFolderPath] = useState('')
+  const [skillFolderVerified, setSkillFolderVerified] = useState(false)
+  const [skillFolderError, setSkillFolderError] = useState<string | null>(null)
+  const [skillFolderFiles, setSkillFolderFiles] = useState<string[]>([])
+  const [isCheckingSkillFolder, setIsCheckingSkillFolder] = useState(false)
 
   // Workspace folder (optional)
   const [workspacePath, setWorkspacePath] = useState('')
@@ -28,44 +21,35 @@ export function NewSandboxClient() {
   const [isCheckingWorkspace, setIsCheckingWorkspace] = useState(false)
   const [workspaceVerified, setWorkspaceVerified] = useState(false)
 
-  const toggleFolder = (path: string) => {
-    setSelectedPaths(prev =>
-      prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]
-    )
+  const handleSkillFolderPathChange = (value: string) => {
+    setSkillFolderPath(value)
+    setSkillFolderError(null)
+    setSkillFolderVerified(false)
+    setSkillFolderFiles([])
   }
 
-  const handleAddCustomPath = async () => {
-    const trimmed = customPath.trim()
+  const handleAddSkillFolder = async () => {
+    const trimmed = skillFolderPath.trim()
     if (!trimmed) return
-    if (addedFolders.some(f => f.path === trimmed)) {
-      setCustomPathError('This folder is already in the list')
-      return
-    }
-
-    setIsCheckingPath(true)
-    setCustomPathError(null)
+    setIsCheckingSkillFolder(true)
+    setSkillFolderError(null)
+    setSkillFolderVerified(false)
+    setSkillFolderFiles([])
 
     try {
       const res = await fetch(`/api/skill-folders/files?path=${encodeURIComponent(trimmed)}&mdOnly=true`)
       if (!res.ok) {
         const err = await res.json()
-        setCustomPathError(err.error ?? 'Directory not found')
+        setSkillFolderError(err.error ?? 'Directory not found')
         return
       }
       const { files } = await res.json() as { files: { name: string }[] }
-      const newFolder: SkillFolder = {
-        id: `added-${Date.now()}`,
-        title: trimmed.split('/').pop() ?? trimmed,
-        path: trimmed,
-        mdFiles: files.map(f => f.name),
-      }
-      setAddedFolders(prev => [...prev, newFolder])
-      setSelectedPaths(prev => [...prev, trimmed])
-      setCustomPath('')
+      setSkillFolderFiles(files.map(f => f.name))
+      setSkillFolderVerified(true)
     } catch {
-      setCustomPathError('Failed to check directory')
+      setSkillFolderError('Failed to check directory')
     } finally {
-      setIsCheckingPath(false)
+      setIsCheckingSkillFolder(false)
     }
   }
 
@@ -85,44 +69,43 @@ export function NewSandboxClient() {
       }
       setWorkspaceVerified(true)
     } catch {
-      setWorkspacePathError('Failed to verify directory')
+      setWorkspacePathError('Failed to check directory')
     } finally {
       setIsCheckingWorkspace(false)
     }
   }
 
-  const handleLaunch = async () => {
-    if (!name.trim()) { setError('Name is required'); return }
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
     setIsCreating(true)
     setError(null)
 
-    const body: Record<string, unknown> = {
-      name: name.trim(),
-      skillFolderPaths: selectedPaths,
-    }
-    const trimmedWorkspace = workspacePath.trim()
-    if (trimmedWorkspace) {
-      body.workspaceFolderPath = trimmedWorkspace
-    }
-
-    const createRes = await fetch('/api/sandboxes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-
-    if (!createRes.ok) {
-      const err = await createRes.json()
-      setError(err.error ?? 'Failed to create sandbox')
+    try {
+      const res = await fetch('/api/sandboxes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          skillFolderPath: skillFolderPath.trim(),
+          workspaceFolderPath: workspacePath.trim() || undefined,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        setError(body.error ?? 'Failed to create sandbox')
+        return
+      }
+      const sandbox = await res.json()
+      router.push(`/sandbox/${sandbox.id}`)
+    } catch {
+      setError('Failed to create sandbox')
+    } finally {
       setIsCreating(false)
-      return
     }
-
-    const sandbox = await createRes.json()
-    router.push(`/sandbox/${sandbox.id}`)
   }
 
-  const inputClass = 'w-full bg-parchment border border-sepia rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-300 focus:outline-none focus:border-stone-400 transition'
+  const inputClass = 'flex-1 bg-parchment border rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-300 focus:outline-none transition font-mono'
 
   return (
     <div className="min-h-screen bg-parchment">
@@ -140,142 +123,102 @@ export function NewSandboxClient() {
 
         <h1 className="font-display text-4xl font-normal text-stone-900 mb-10">New Sandbox</h1>
 
-        <div className="space-y-8">
-          {/* Name */}
+        <form onSubmit={handleCreate} className="space-y-8">
           <div>
-            <label className="block text-sm font-medium text-stone-600 mb-2">Name</label>
+            <label className="block text-sm font-medium text-stone-600 mb-2">Sandbox name</label>
             <input
-              type="text"
+              autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="e.g. Epi 301 — Week 3 Homework"
-              className={inputClass}
+              placeholder="e.g. My research agent"
+              className="w-full bg-parchment border border-sepia rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-300 focus:outline-none focus:border-stone-400 transition"
             />
           </div>
 
-          {/* Skill folders */}
           <div>
-            <label className="block text-sm font-medium text-stone-600 mb-2">Skill Folders</label>
-            <p className="text-xs text-stone-400 mb-3">
-              Paths to folders containing .md skill files the agent can use.
-            </p>
-
-            {addedFolders.length > 0 && (
-              <div className="space-y-2 mb-3">
-                {addedFolders.map(folder => {
-                  const selected = selectedPaths.includes(folder.path)
-                  return (
-                    <div key={folder.id}>
-                      <button
-                        onClick={() => toggleFolder(folder.path)}
-                        className={`w-full text-left px-4 py-3 rounded border transition ${
-                          selected
-                            ? 'border-wine/40 bg-wine/5 text-wine'
-                            : 'border-sepia bg-parchment text-stone-500 hover:border-stone-400'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`text-sm ${selected ? 'text-wine' : 'text-stone-300'}`}>{selected ? '✓' : '○'}</span>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium">{folder.title}</div>
-                            <div className="text-xs text-stone-400 font-mono mt-0.5 truncate">{folder.path}</div>
-                          </div>
-                        </div>
-                      </button>
-                      {selected && folder.mdFiles.length > 0 && (
-                        <div className="ml-4 mt-1 pl-3 border-l border-sepia space-y-0.5">
-                          {folder.mdFiles.map(f => (
-                            <div key={f} className="text-xs text-stone-400 font-mono py-0.5">{f}</div>
-                          ))}
-                        </div>
-                      )}
-                      {selected && folder.mdFiles.length === 0 && (
-                        <div className="ml-4 mt-1 pl-3 border-l border-sepia">
-                          <div className="text-xs text-stone-400 italic py-0.5">No .md files found</div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
+            <label className="block text-sm font-medium text-stone-600 mb-2">
+              Skills folder <span className="text-stone-400 font-normal">(optional)</span>
+            </label>
             <div className="flex gap-2">
               <input
-                type="text"
-                value={customPath}
-                onChange={e => { setCustomPath(e.target.value); setCustomPathError(null) }}
-                onKeyDown={e => { if (e.key === 'Enter') handleAddCustomPath() }}
-                placeholder="/path/to/skills/folder"
-                className="flex-1 bg-parchment border border-sepia rounded px-3 py-2 text-sm text-stone-900 placeholder-stone-300 focus:outline-none focus:border-stone-400 font-mono transition"
+                value={skillFolderPath}
+                onChange={e => handleSkillFolderPathChange(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddSkillFolder() } }}
+                placeholder="/absolute/path/to/your/skills"
+                className={`${inputClass} ${skillFolderVerified ? 'border-wine/40 focus:border-wine/60' : 'border-sepia focus:border-stone-400'}`}
               />
               <button
-                onClick={handleAddCustomPath}
-                disabled={!customPath.trim() || isCheckingPath}
-                className="px-3 py-2 bg-vellum hover:bg-linen disabled:opacity-40 text-stone-600 text-sm rounded transition border border-sepia"
+                type="button"
+                onClick={handleAddSkillFolder}
+                disabled={!skillFolderPath.trim() || isCheckingSkillFolder}
+                className="px-3 py-2 bg-vellum hover:bg-linen disabled:opacity-40 text-stone-600 text-sm rounded transition border border-sepia shrink-0"
               >
-                {isCheckingPath ? '...' : 'Add'}
+                {isCheckingSkillFolder ? '...' : 'Add'}
               </button>
             </div>
-            {customPathError && (
-              <p className="text-xs text-wine mt-1">{customPathError}</p>
+            <p className="text-xs text-stone-400 mt-1">The folder where your skill files and feedback.md live.</p>
+
+            {skillFolderError && <p className="text-xs text-wine mt-1">{skillFolderError}</p>}
+
+            {skillFolderVerified && (
+              <div className="mt-2 rounded border border-sepia overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-1.5 border-b border-sepia bg-vellum">
+                  <span className="text-xs text-stone-500 font-medium">
+                    {skillFolderFiles.length === 0 ? 'Empty folder' : `${skillFolderFiles.length} .md file${skillFolderFiles.length !== 1 ? 's' : ''}`}
+                  </span>
+                  <span className="text-xs text-wine/60">✓ Found</span>
+                </div>
+                {skillFolderFiles.length > 0 && (
+                  <div className="max-h-32 overflow-y-auto py-1 bg-parchment">
+                    {skillFolderFiles.map(f => (
+                      <div key={f} className="px-3 py-1 text-xs text-stone-400 font-mono hover:text-stone-600 transition">{f}</div>
+                    ))}
+                  </div>
+                )}
+                {skillFolderFiles.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-stone-400 italic bg-parchment">No .md files yet.</div>
+                )}
+              </div>
             )}
           </div>
 
-          {/* Workspace folder */}
           <div>
             <label className="block text-sm font-medium text-stone-600 mb-2">
-              Workspace Folder <span className="text-stone-400 font-normal">(optional)</span>
+              Workspace folder <span className="text-stone-400 font-normal">(optional — leave blank for a managed workspace)</span>
             </label>
-            <p className="text-xs text-stone-400 mb-3">
-              Point to an existing folder on disk — the agent will read and write files there directly.
-              Leave blank to use a managed workspace (you can upload files later).
-            </p>
             <div className="flex gap-2">
               <input
-                type="text"
                 value={workspacePath}
-                onChange={e => {
-                  setWorkspacePath(e.target.value)
-                  setWorkspacePathError(null)
-                  setWorkspaceVerified(false)
-                }}
-                onKeyDown={e => { if (e.key === 'Enter') handleVerifyWorkspace() }}
-                placeholder="/path/to/your/project"
-                className={`flex-1 bg-parchment border rounded px-3 py-2 text-sm text-stone-900 placeholder-stone-300 focus:outline-none font-mono transition ${
-                  workspaceVerified ? 'border-wine/40 focus:border-wine/60' : 'border-sepia focus:border-stone-400'
-                }`}
+                onChange={e => { setWorkspacePath(e.target.value); setWorkspaceVerified(false); setWorkspacePathError(null) }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleVerifyWorkspace() } }}
+                placeholder="/absolute/path/to/workspace"
+                className={`${inputClass} ${workspaceVerified ? 'border-wine/40 focus:border-wine/60' : 'border-sepia focus:border-stone-400'}`}
               />
               <button
+                type="button"
                 onClick={handleVerifyWorkspace}
                 disabled={!workspacePath.trim() || isCheckingWorkspace}
-                className="px-3 py-2 bg-vellum hover:bg-linen disabled:opacity-40 text-stone-600 text-sm rounded transition border border-sepia"
+                className="px-3 py-2 bg-vellum hover:bg-linen disabled:opacity-40 text-stone-600 text-sm rounded transition border border-sepia shrink-0"
               >
-                {isCheckingWorkspace ? '...' : 'Verify'}
+                {isCheckingWorkspace ? '...' : 'Add'}
               </button>
             </div>
-            {workspacePathError && (
-              <p className="text-xs text-wine mt-1">{workspacePathError}</p>
-            )}
-            {workspaceVerified && (
-              <p className="text-xs text-wine/60 mt-1">✓ Folder found</p>
-            )}
+            {workspacePathError && <p className="text-xs text-wine mt-1">{workspacePathError}</p>}
+            {workspaceVerified && <p className="text-xs text-wine/60 mt-1">✓ Found</p>}
           </div>
 
           {error && (
-            <div className="text-wine text-sm bg-wine/5 border border-wine/20 rounded px-4 py-2">
-              {error}
-            </div>
+            <div className="text-wine text-sm bg-wine/5 border border-wine/20 rounded px-4 py-2">{error}</div>
           )}
 
           <button
-            onClick={handleLaunch}
+            type="submit"
             disabled={isCreating || !name.trim()}
             className="w-full bg-wine hover:bg-wine-hover disabled:opacity-40 text-parchment font-medium py-3 rounded transition"
           >
-            {isCreating ? 'Creating...' : 'Launch Sandbox →'}
+            {isCreating ? 'Creating...' : 'Create Sandbox →'}
           </button>
-        </div>
+        </form>
       </main>
     </div>
   )
