@@ -114,6 +114,7 @@ export function SessionView({
   }, [sessionId, activeConversationId])
 
   const handleRenameConversation = useCallback(async (convId: string, title: string) => {
+    const prevConvs = conversations
     setConversations(prev => prev.map(c => c.id === convId ? { ...c, title } : c))
     try {
       await fetch(`/api/sessions/${sessionId}/conversations/${convId}`, {
@@ -123,9 +124,9 @@ export function SessionView({
       })
     } catch {
       // revert on error
-      setConversations(prev => prev.map(c => c.id === convId ? { ...c, title: c.title } : c))
+      setConversations(prevConvs)
     }
-  }, [sessionId])
+  }, [sessionId, conversations])
 
   const handleMarkdownChange = useCallback(
     async (value: string) => {
