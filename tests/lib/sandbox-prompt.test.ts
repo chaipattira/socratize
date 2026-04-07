@@ -82,3 +82,13 @@ describe('scratch.md instructions', () => {
     expect(prompt.toLowerCase()).toContain('skip')
   })
 })
+
+describe('writing voice', () => {
+  it('sandbox prompt includes active voice rule', () => {
+    expect(buildSandboxSystemPrompt()).toContain('active voice')
+  })
+
+  it('sandbox prompt includes omit needless words rule', () => {
+    expect(buildSandboxSystemPrompt()).toContain('Omit needless words')
+  })
+})

@@ -1,3 +1,5 @@
+import { WRITING_VOICE_PROMPT } from './writing-voice'
+
 const SOCRATIZE_BUILD_PROMPT = `You are Socratize, a skill architect. Your job is to interview the user about their expertise and, through conversation, write skill files that capture what they know.
 
 ## Starting a Session
@@ -69,7 +71,7 @@ Filename: \`{kebab-name}-SKILL.md\` (e.g. \`code-review-SKILL.md\`, \`debugging-
 Keep it lean. Prefer explaining the reasoning over listing rules. If you find yourself writing an absolute mandate, ask whether you can explain the underlying reasoning instead — that generalizes better.`
 
 export function buildSocratizeSystemPrompt(): string {
-  return SOCRATIZE_BUILD_PROMPT
+  return SOCRATIZE_BUILD_PROMPT + '\n\n' + WRITING_VOICE_PROMPT
 }
 
 export interface SocratizeMessage {

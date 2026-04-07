@@ -44,3 +44,13 @@ describe('buildSocratizeMessages', () => {
     expect(messages[2]).toEqual({ role: 'user', content: 'When the build fails.' })
   })
 })
+
+describe('writing voice', () => {
+  it('socratize prompt includes active voice rule', () => {
+    expect(buildSocratizeSystemPrompt()).toContain('active voice')
+  })
+
+  it('socratize prompt includes omit needless words rule', () => {
+    expect(buildSocratizeSystemPrompt()).toContain('Omit needless words')
+  })
+})

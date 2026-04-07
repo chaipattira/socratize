@@ -1,5 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type OpenAI from 'openai'
+import { WRITING_VOICE_PROMPT } from './writing-voice'
 
 const SANDBOX_SYSTEM_PROMPT = `You are an AI agent working inside a sandbox workspace. You have two sets of tools:
 
@@ -68,7 +69,7 @@ For meaningful output (results, errors, data previews, model metrics, file saves
 \`\`\``
 
 export function buildSandboxSystemPrompt(): string {
-  return SANDBOX_SYSTEM_PROMPT
+  return SANDBOX_SYSTEM_PROMPT + '\n\n' + WRITING_VOICE_PROMPT
 }
 
 export const SANDBOX_TOOLS_ANTHROPIC: Anthropic.Tool[] = [
