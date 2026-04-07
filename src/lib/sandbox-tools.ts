@@ -1,6 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 
+const BUILTIN_SKILLS_DIR = path.join(process.cwd(), 'src', 'lib', 'builtin-skills')
+
 export const MAX_FILE_BYTES = 50 * 1024 // 50KB
 
 export function getWorkspacePath(sandboxId: string): string {
@@ -77,6 +79,9 @@ export function listSkillsAcrossFolders(folderPaths: string[]): string[] {
     }
   }
 
+  // Always include built-in skills first
+  collect(BUILTIN_SKILLS_DIR, 'builtin', 0)
+
   for (const folder of folderPaths) {
     if (!fs.existsSync(folder)) continue
     collect(folder, '', 0)
@@ -85,6 +90,16 @@ export function listSkillsAcrossFolders(folderPaths: string[]): string[] {
 }
 
 function findSkillFile(folderPaths: string[], filename: string): string | null {
+  // Resolve builtin/ prefix to the built-in skills directory
+  if (filename.startsWith('builtin/')) {
+    const builtinRelative = filename.slice('builtin/'.length)
+    const builtinPath = path.join(BUILTIN_SKILLS_DIR, builtinRelative)
+    try {
+      if (fs.existsSync(builtinPath) && fs.statSync(builtinPath).isFile()) return builtinPath
+    } catch { /* skip */ }
+    return null
+  }
+
   for (const folder of folderPaths) {
     const filePath = path.join(folder, filename)
     try {

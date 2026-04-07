@@ -101,19 +101,22 @@ describe('listSkillsAcrossFolders', () => {
     fs.mkdirSync(dir2)
     fs.writeFileSync(path.join(skillDir, 'confounding-SKILL.md'), '')
     fs.writeFileSync(path.join(dir2, 'causal-SKILL.md'), '')
-    fs.writeFileSync(path.join(skillDir, 'notes.md'), '') // non-skill, excluded
+    fs.writeFileSync(path.join(skillDir, 'notes.md'), '')
     const result = listSkillsAcrossFolders([skillDir, dir2])
     expect(result).toContain('confounding-SKILL.md')
     expect(result).toContain('causal-SKILL.md')
-    expect(result).not.toContain('notes.md')
+    expect(result).toContain('notes.md')
   })
 
-  it('returns empty array for empty folders', () => {
-    expect(listSkillsAcrossFolders([skillDir])).toEqual([])
+  it('returns only builtin skills for empty user folders', () => {
+    const result = listSkillsAcrossFolders([skillDir])
+    expect(result.every(s => s.startsWith('builtin/'))).toBe(true)
   })
 
-  it('returns empty array if no folders given', () => {
-    expect(listSkillsAcrossFolders([])).toEqual([])
+  it('returns only builtin skills if no folders given', () => {
+    const result = listSkillsAcrossFolders([])
+    expect(result.every(s => s.startsWith('builtin/'))).toBe(true)
+    expect(result.length).toBeGreaterThan(0)
   })
 })
 
@@ -155,5 +158,53 @@ describe('readSkillFilePreview', () => {
 
   it('returns error string on traversal filename', () => {
     expect(readSkillFilePreview([skillDir], '../escape.md')).toMatch(/invalid filename/i)
+  })
+})
+
+describe('listSkillsAcrossFolders — builtin skills', () => {
+  it('includes builtin skills prefixed with builtin/', () => {
+    const result = listSkillsAcrossFolders([])
+    expect(result).toContain('builtin/r-code.md')
+    expect(result).toContain('builtin/file-loading.md')
+  })
+
+  it('builtin skills appear alongside user skills', () => {
+    fs.writeFileSync(path.join(skillDir, 'my-SKILL.md'), '')
+    const result = listSkillsAcrossFolders([skillDir])
+    expect(result).toContain('my-SKILL.md')
+    expect(result).toContain('builtin/r-code.md')
+  })
+
+  it('builtin skills are not duplicated across multiple calls', () => {
+    const result = listSkillsAcrossFolders([skillDir, skillDir])
+    const builtinCount = result.filter(s => s === 'builtin/r-code.md').length
+    expect(builtinCount).toBe(1)
+  })
+})
+
+describe('readSkillFile — builtin/ prefix', () => {
+  it('resolves builtin/r-code.md to the builtin skills directory', () => {
+    const content = readSkillFile([], 'builtin/r-code.md')
+    expect(content).toContain('native pipe')
+    expect(content).not.toMatch(/Error/)
+  })
+
+  it('resolves builtin/file-loading.md to the builtin skills directory', () => {
+    const content = readSkillFile([], 'builtin/file-loading.md')
+    expect(content).toContain('python-docx')
+    expect(content).not.toMatch(/Error/)
+  })
+
+  it('returns error for unknown builtin skill', () => {
+    const content = readSkillFile([], 'builtin/nonexistent.md')
+    expect(content).toMatch(/not found/)
+  })
+})
+
+describe('readSkillFilePreview — builtin/ prefix', () => {
+  it('resolves builtin/r-code.md preview', () => {
+    const content = readSkillFilePreview([], 'builtin/r-code.md')
+    expect(content).not.toMatch(/Error/)
+    expect(content.split('\n').length).toBeLessThanOrEqual(10)
   })
 })
