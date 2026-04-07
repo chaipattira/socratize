@@ -71,8 +71,8 @@ Draw from these as needed:
 
 Ask **one question at a time**. Keep responses concise — you are interviewing, not lecturing.`
 
-export function buildKbSystemPrompt(mode: ExtractionMode): string {
-  const interview = mode === 'direct' ? DIRECT_INTERVIEW : GUIDED_INTERVIEW
+export function buildKbSystemPrompt(_mode?: ExtractionMode): string {
+  const interview = GUIDED_INTERVIEW
 
   return `You are Socratize, a knowledge extraction specialist working with a folder of markdown files.
 

@@ -15,6 +15,7 @@ export function validateFilename(filename: string): boolean {
 
 export function validateSkillFilename(filename: string): boolean {
   if (!validateFilename(filename)) return false
+  if (filename === 'feedback.md') return true
   // Flat convention: SKILL.md or {kebab-name}-SKILL.md
   if (!filename.includes('/')) return filename === 'SKILL.md' || filename.endsWith('-SKILL.md')
   // Subdirectory convention: {folder}/SKILL.md (one level only)

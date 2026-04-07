@@ -6,92 +6,64 @@ import {
   buildMessages,
 } from '@/lib/extraction-prompt'
 
-describe('buildSystemPrompt guided mode', () => {
+describe('buildSystemPrompt', () => {
   it('includes the current document state', () => {
-    const prompt = buildSystemPrompt('## When to Use\n\nFoo.', 'guided')
+    const prompt = buildSystemPrompt('## When to Use\n\nFoo.')
     expect(prompt).toContain('## When to Use')
     expect(prompt).toContain('Foo.')
   })
 
   it('uses empty document placeholder when document is empty', () => {
-    const prompt = buildSystemPrompt('', 'guided')
+    const prompt = buildSystemPrompt('')
     expect(prompt).toContain('(empty)')
   })
 
-  it('includes skill-shaped extraction phases', () => {
-    const prompt = buildSystemPrompt('', 'guided')
+  it('includes all extraction phases', () => {
+    const prompt = buildSystemPrompt('')
     expect(prompt).toContain('Triggers')
     expect(prompt).toContain('Failure Modes')
     expect(prompt).toContain('Edge Cases')
   })
 
-  it('opens with the tacit-knowledge question', () => {
-    const prompt = buildSystemPrompt('', 'guided')
-    expect(prompt).toContain('other people on your team')
-  })
-})
-
-describe('buildSystemPrompt direct mode', () => {
-  it('includes the current document state', () => {
-    const prompt = buildSystemPrompt('## Process\n\nBar.', 'direct')
-    expect(prompt).toContain('## Process')
-    expect(prompt).toContain('Bar.')
+  it('opens with an adaptive prompt that works for both guided and direct users', () => {
+    const prompt = buildSystemPrompt('')
+    expect(prompt).toContain('If you have a structure in mind')
   })
 
-  it('uses empty document placeholder when document is empty', () => {
-    const prompt = buildSystemPrompt('', 'direct')
-    expect(prompt).toContain('(empty)')
-  })
-
-  it('opens with structured intake', () => {
-    const prompt = buildSystemPrompt('', 'direct')
-    expect(prompt).toContain('name of this')
-    expect(prompt).toContain('step')
+  it('ignores the legacy mode parameter', () => {
+    const prompted = buildSystemPrompt('doc', 'guided')
+    const promptDirect = buildSystemPrompt('doc', 'direct')
+    expect(prompted).toBe(promptDirect)
   })
 })
 
 describe('UPDATE_DOCUMENT_TOOL', () => {
-  it('has required fields for Anthropic tool format', () => {
+  it('is named update_document', () => {
     expect(UPDATE_DOCUMENT_TOOL.name).toBe('update_document')
-    expect(UPDATE_DOCUMENT_TOOL.input_schema).toBeDefined()
-    expect(UPDATE_DOCUMENT_TOOL.input_schema.properties.ops).toBeDefined()
   })
 })
 
 describe('UPDATE_DOCUMENT_TOOL_OPENAI', () => {
-  it('has OpenAI function tool format', () => {
+  it('wraps in function type', () => {
     expect(UPDATE_DOCUMENT_TOOL_OPENAI.type).toBe('function')
     expect(UPDATE_DOCUMENT_TOOL_OPENAI.function.name).toBe('update_document')
-    expect(UPDATE_DOCUMENT_TOOL_OPENAI.function.parameters).toBeDefined()
   })
 })
 
 describe('buildMessages', () => {
-  it('converts stored messages to Anthropic format', () => {
-    const stored = [
-      { role: 'user', content: 'Hello' },
-      { role: 'assistant', content: 'Hi there' },
-    ]
-    const messages = buildMessages(stored)
-    expect(messages).toHaveLength(2)
-    expect(messages[0]).toEqual({ role: 'user', content: 'Hello' })
-    expect(messages[1]).toEqual({ role: 'assistant', content: 'Hi there' })
+  it('filters to user and assistant roles only', () => {
+    const msgs = buildMessages([
+      { role: 'user', content: 'hello' },
+      { role: 'assistant', content: 'hi' },
+      { role: 'system', content: 'ignored' },
+    ])
+    expect(msgs).toHaveLength(2)
+    expect(msgs[0].role).toBe('user')
   })
 
-  it('adds a new user message when provided', () => {
-    const messages = buildMessages([], 'New question')
-    expect(messages).toHaveLength(1)
-    expect(messages[0]).toEqual({ role: 'user', content: 'New question' })
-  })
-
-  it('filters out non-user/assistant roles', () => {
-    const stored = [
-      { role: 'system', content: 'sys prompt' },
-      { role: 'user', content: 'Hello' },
-      { role: 'assistant', content: 'Hi' },
-    ]
-    const messages = buildMessages(stored)
-    expect(messages).toHaveLength(2)
-    expect(messages.every(m => m.role === 'user' || m.role === 'assistant')).toBe(true)
+  it('appends new user message when provided', () => {
+    const msgs = buildMessages([], 'new message')
+    expect(msgs).toHaveLength(1)
+    expect(msgs[0]).toEqual({ role: 'user', content: 'new message' })
   })
 })

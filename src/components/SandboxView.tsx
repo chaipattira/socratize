@@ -20,6 +20,7 @@ const EXTRACTABLE_EXTS = new Set(['.pdf', '.docx', '.pptx', '.xlsx'])
 interface SandboxViewProps {
   sandboxId: string
   name: string
+  skillFolderPath: string
   initialMessages: SandboxMessage[]
   initialFiles: string[]
   initialConversations: Array<{ id: string; title: string; createdAt: string }>
@@ -29,6 +30,7 @@ interface SandboxViewProps {
 export function SandboxView({
   sandboxId,
   name,
+  skillFolderPath,
   initialMessages,
   initialFiles,
   initialConversations,
@@ -299,6 +301,7 @@ export function SandboxView({
             key={activeConversationId}
             sandboxId={sandboxId}
             conversationId={activeConversationId}
+            skillFolderPath={skillFolderPath}
             initialMessages={activeConversationMessages}
             conversations={conversations}
             onConversationSelect={handleConversationSelect}
@@ -341,6 +344,7 @@ export function SandboxView({
 interface SandboxChatWrapperProps {
   sandboxId: string
   conversationId: string
+  skillFolderPath: string
   initialMessages: SandboxMessage[]
   conversations: Array<{ id: string; title: string; createdAt: string }>
   onConversationSelect: (id: string) => void
@@ -355,6 +359,7 @@ interface SandboxChatWrapperProps {
 function SandboxChatWrapper({
   sandboxId,
   conversationId,
+  skillFolderPath,
   initialMessages,
   conversations,
   onConversationSelect,
@@ -436,6 +441,30 @@ function SandboxChatWrapper({
     triggerInit()
   }, [triggerInit])
 
+  const handleRate = useCallback(async (
+    _messageId: string,
+    rating: 'up' | 'down',
+    comment: string,
+    promptExcerpt: string,
+    responseExcerpt: string,
+  ) => {
+    try {
+      await fetch(`/api/sandboxes/${sandboxId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating,
+          comment: comment.trim() || undefined,
+          activeSkills: Array.from(enabledSkills).filter(s => !s.startsWith('builtin/')),
+          promptExcerpt,
+          responseExcerpt,
+        }),
+      })
+    } catch {
+      // Silent failure — feedback is best-effort
+    }
+  }, [sandboxId, enabledSkills])
+
   return (
     <SandboxChat
       messages={messages}
@@ -455,6 +484,8 @@ function SandboxChatWrapper({
       onSend={handleSend}
       onReInject={handleReInject}
       onStop={stopStreaming}
+      onRate={handleRate}
+      skillFolderPath={skillFolderPath}
       conversations={conversations}
       activeConversationId={conversationId}
       onConversationSelect={onConversationSelect}

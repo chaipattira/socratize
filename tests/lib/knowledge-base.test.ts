@@ -150,4 +150,13 @@ describe('validateSkillFilename', () => {
   it('rejects subdirectory paths', () => {
     expect(validateSkillFilename('sub/code-review-SKILL.md')).toBe(false)
   })
+
+  it('accepts feedback.md', () => {
+    expect(validateSkillFilename('feedback.md')).toBe(true)
+  })
+
+  it('still rejects other plain md files', () => {
+    expect(validateSkillFilename('notes.md')).toBe(false)
+    expect(validateSkillFilename('my-feedback.md')).toBe(false)
+  })
 })

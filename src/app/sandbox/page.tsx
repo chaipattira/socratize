@@ -7,7 +7,7 @@ export default async function SandboxPage() {
     select: {
       id: true,
       name: true,
-      skillFolderPaths: true,
+      skillFolderPath: true,
       createdAt: true,
       updatedAt: true,
     },
