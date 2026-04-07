@@ -9,6 +9,7 @@ import { insertNewlineAndIndent } from '@codemirror/commands'
 import type { ChatMessage, ToolCallItem } from '@/hooks/useChat'
 import { supportsThinking } from '@/lib/thinking-models'
 import { ToolCallRow } from './ToolCallRow'
+import { ConversationPopover } from './ConversationPopover'
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
 
@@ -47,6 +48,10 @@ interface ChatPaneProps {
   onThinkingToggle: () => void
   quotedText?: string
   onClearQuote?: () => void
+  conversations: Array<{ id: string; title: string; createdAt: string }>
+  activeConversationId: string
+  onConversationSelect: (id: string) => void
+  onNewConversation: () => void
 }
 
 function ThinkingBlockView({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
@@ -86,6 +91,10 @@ export function ChatPane({
   onThinkingToggle,
   quotedText,
   onClearQuote,
+  conversations,
+  activeConversationId,
+  onConversationSelect,
+  onNewConversation,
 }: ChatPaneProps) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -149,6 +158,13 @@ export function ChatPane({
     <div className="flex flex-col h-full bg-parchment">
       <div className="px-4 py-2 bg-parchment border-b border-sepia text-xs flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
+          <ConversationPopover
+            conversations={conversations}
+            activeConversationId={activeConversationId}
+            onSelect={onConversationSelect}
+            onNew={onNewConversation}
+            disabled={isStreaming}
+          />
           {headerContent()}
         </div>
         {supportsThinking(provider, model) && (
