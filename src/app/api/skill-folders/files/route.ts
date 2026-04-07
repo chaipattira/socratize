@@ -2,17 +2,17 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
-function collectMdFiles(dir: string, depth = 0): string[] {
+function collectAllFiles(dir: string, depth = 0): string[] {
   if (depth > 3) return []
   try {
     const entries = fs.readdirSync(dir, { withFileTypes: true })
     const results: string[] = []
     for (const entry of entries) {
       if (entry.name.startsWith('.')) continue
-      if (entry.isFile() && entry.name.endsWith('.md')) {
+      if (entry.isFile()) {
         results.push(entry.name)
       } else if (entry.isDirectory()) {
-        const sub = collectMdFiles(path.join(dir, entry.name), depth + 1)
+        const sub = collectAllFiles(path.join(dir, entry.name), depth + 1)
         for (const f of sub) results.push(`${entry.name}/${f}`)
       }
     }
@@ -41,6 +41,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Not a directory' }, { status: 400 })
   }
 
-  const files = collectMdFiles(folderPath).map(name => ({ name }))
+  const files = collectAllFiles(folderPath).map(name => ({ name }))
   return NextResponse.json({ files })
 }
