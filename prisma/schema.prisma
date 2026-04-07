@@ -57,7 +57,7 @@ model ApiKey {
 model Sandbox {
   id                  String                @id @default(cuid())
   name                String
-  skillFolderPaths    String // JSON array of absolute folder paths
+  skillFolderPath     String                @default("") // single absolute folder path
   workspaceFolderPath String
   conversations       SandboxConversation[]
   createdAt           DateTime              @default(now())
