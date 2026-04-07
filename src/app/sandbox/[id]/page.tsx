@@ -13,16 +13,15 @@ export default async function SandboxIdePage({
   const sandbox = await prisma.sandbox.findUnique({
     where: { id },
     include: {
-      messages: { orderBy: { createdAt: 'asc' } },
+      conversations: {
+        orderBy: { createdAt: 'asc' },
+        include: {
+          messages: { orderBy: { createdAt: 'asc' } },
+        },
+      },
     },
   })
   if (!sandbox) return notFound()
-
-  const initialMessages = sandbox.messages.map(m => ({
-    id: m.id,
-    role: m.role as 'user' | 'assistant',
-    content: m.content,
-  }))
 
   const workspaceExists = sandbox.workspaceFolderPath !== '' &&
     fs.existsSync(sandbox.workspaceFolderPath)
@@ -30,12 +29,42 @@ export default async function SandboxIdePage({
     ? listWorkspaceFiles(sandbox.workspaceFolderPath)
     : []
 
+  // Use the most recently updated conversation (or create one if none exist)
+  let activeConv = sandbox.conversations.length > 0
+    ? [...sandbox.conversations].sort((a, b) =>
+        new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime()
+      )[0]
+    : null
+
+  // If no conversations exist yet (new sandbox with no messages), create one
+  if (!activeConv) {
+    activeConv = await prisma.sandboxConversation.create({
+      data: { sandboxId: id, title: 'New conversation', updatedAt: new Date() },
+      include: { messages: true },
+    })
+    sandbox.conversations.push(activeConv as typeof sandbox.conversations[0])
+  }
+
+  const initialMessages = activeConv.messages.map(m => ({
+    id: m.id,
+    role: m.role as 'user' | 'assistant',
+    content: m.content,
+  }))
+
+  const initialConversations = sandbox.conversations.map(c => ({
+    id: c.id,
+    title: c.title,
+    createdAt: c.createdAt.toISOString(),
+  }))
+
   return (
     <SandboxView
       sandboxId={sandbox.id}
       name={sandbox.name}
       initialMessages={initialMessages}
       initialFiles={initialFiles}
+      initialConversations={initialConversations}
+      initialConversationId={activeConv.id}
     />
   )
 }
