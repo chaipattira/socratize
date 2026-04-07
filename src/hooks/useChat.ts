@@ -22,6 +22,7 @@ export interface ChatMessage {
 
 interface UseChatOptions {
   sessionId: string
+  conversationId?: string
   initialMessages?: ChatMessage[]
   onDocOps: (ops: DocOp[]) => void
   onFileUpdate?: (update: { filename: string; content: string }) => void
@@ -31,6 +32,7 @@ interface UseChatOptions {
 
 export function useChat({
   sessionId,
+  conversationId,
   initialMessages = [],
   onDocOps,
   onFileUpdate,
@@ -81,7 +83,7 @@ export function useChat({
           response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId, message: content, thinkingEnabled }),
+            body: JSON.stringify({ sessionId, conversationId, message: content, thinkingEnabled }),
           })
         }
 
@@ -157,7 +159,7 @@ export function useChat({
         setIsStreaming(false)
       }
     },
-    [sessionId, isStreaming, onDocOps, onFileUpdate, phase, thinkingEnabled]
+    [sessionId, conversationId, isStreaming, onDocOps, onFileUpdate, phase, thinkingEnabled]
   )
 
   // Fires the first LLM turn for the build phase (no prior user message)
@@ -260,7 +262,7 @@ export function useChat({
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, message: '__KB_START__', isKbTrigger: true, thinkingEnabled }),
+        body: JSON.stringify({ sessionId, conversationId, message: '__KB_START__', isKbTrigger: true, thinkingEnabled }),
       })
 
       if (!response.ok) {
@@ -323,7 +325,7 @@ export function useChat({
     } finally {
       setIsStreaming(false)
     }
-  }, [sessionId, isStreaming, onFileUpdate, thinkingEnabled])
+  }, [sessionId, conversationId, isStreaming, onFileUpdate, thinkingEnabled])
 
   return {
     messages,
