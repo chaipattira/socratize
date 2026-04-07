@@ -51,7 +51,7 @@ export function SandboxFileTree({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 text-xs text-stone-500 border-b border-sepia font-medium uppercase tracking-wide shrink-0">
+      <div className="px-3 py-2 text-xs text-stone-500 border-b border-sepia font-medium uppercase tracking-wide shrink-0 min-h-[40px] flex items-center">
         Workspace
       </div>
       <div className="flex-1 overflow-y-auto py-1">

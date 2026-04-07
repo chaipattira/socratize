@@ -264,7 +264,7 @@ export function SandboxView({
         />
         {/* Center: editor */}
         <div className="flex-1 min-w-0 border-r border-sepia flex flex-col min-h-0">
-          <div className="px-4 py-2 bg-parchment border-b border-sepia text-xs text-stone-400 font-mono shrink-0">
+          <div className="px-4 py-2 bg-parchment border-b border-sepia text-xs text-stone-400 font-mono shrink-0 min-h-[40px] flex items-center">
             {activeFile?.filename ?? 'No file open'}
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
