@@ -4,7 +4,7 @@ import { useDragResize } from '@/hooks/useDragResize'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { EditorView } from '@codemirror/view'
-import { isBinaryFile } from '@/lib/file-types'
+import { isBinaryFile, isUnsupportedPreviewFile } from '@/lib/file-types'
 import { useSandboxChat, type SandboxMessage } from '@/hooks/useSandboxChat'
 import { SandboxFileTree } from './SandboxFileTree'
 import { SandboxChat } from './SandboxChat'
@@ -273,6 +273,11 @@ export function SandboxView({
                 <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
                   <p className="text-sm text-stone-400 font-medium">Preview not available</p>
                   <p className="text-xs text-stone-300 mt-1">Ask the agent to load this file.</p>
+                </div>
+              ) : isUnsupportedPreviewFile(activeFile.filename) ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+                  <p className="text-sm text-stone-400 font-medium">Preview not available</p>
+                  <p className="text-xs text-stone-300 mt-1">File not supported</p>
                 </div>
               ) : (
                 <CodeMirror
