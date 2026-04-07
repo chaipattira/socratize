@@ -87,6 +87,35 @@ export function NewSessionClient() {
     }
   }
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files
+    if (!selected || selected.length === 0) return
+    const trimmed = folderPath.trim()
+
+    setIsUploading(true)
+    setUploadError(null)
+
+    try {
+      const formData = new FormData()
+      for (const file of Array.from(selected)) {
+        formData.append('files', file)
+      }
+
+      const res = await fetch(`/api/skill-folders/upload?path=${encodeURIComponent(trimmed)}`, {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) throw new Error(`Upload failed (${res.status})`)
+
+      await refreshFolderFiles(trimmed)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setIsUploading(false)
+      e.target.value = ''
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
@@ -207,11 +236,28 @@ export function NewSessionClient() {
             )}
 
             {folderVerified && extractionMode !== 'socratize' && (
-              <div className="mt-2 flex items-center justify-between px-3 py-1.5 rounded border border-sepia bg-vellum">
-                <span className="text-xs text-stone-500 font-medium">
-                  {folderFiles.length === 0 ? 'Empty folder' : `${folderFiles.length} file${folderFiles.length !== 1 ? 's' : ''} found`}
-                </span>
-                <span className="text-xs text-wine/60">✓ Found</span>
+              <div className="mt-2 rounded border border-sepia bg-parchment overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-1.5 border-b border-sepia bg-vellum">
+                  <span className="text-xs text-stone-500 font-medium">
+                    {folderFiles.length === 0 ? 'Empty folder' : `${folderFiles.length} file${folderFiles.length !== 1 ? 's' : ''} found`}
+                  </span>
+                  <span className="text-xs text-wine/60">✓ Found</span>
+                </div>
+                <div className="px-3 py-2">
+                  <label className={`text-xs text-stone-400 hover:text-wine transition cursor-pointer ${isUploading ? 'opacity-40 pointer-events-none' : ''}`}>
+                    {isUploading ? 'Uploading...' : '+ Upload file'}
+                    <input
+                      type="file"
+                      multiple
+                      className="sr-only"
+                      onChange={handleUpload}
+                      disabled={isUploading}
+                    />
+                  </label>
+                  {uploadError && (
+                    <p className="text-xs text-wine mt-1">{uploadError}</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
