@@ -11,6 +11,7 @@ export interface SandboxMessage {
 
 interface UseSandboxChatOptions {
   sandboxId: string
+  conversationId: string
   initialMessages?: SandboxMessage[]
   onFileUpdate?: (update: { filename: string; content: string }) => void
   onSkillsLoaded?: (skills: string[]) => void
@@ -22,6 +23,7 @@ const INIT_MESSAGE = 'List all available skills and read a preview of each one. 
 
 export function useSandboxChat({
   sandboxId,
+  conversationId,
   initialMessages = [],
   onFileUpdate,
   onSkillsLoaded,
@@ -69,7 +71,7 @@ export function useSandboxChat({
     let wasAborted = false
 
     try {
-      const response = await fetch(`/api/sandboxes/${sandboxId}/chat`, {
+      const response = await fetch(`/api/sandboxes/${sandboxId}/conversations/${conversationId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -160,7 +162,7 @@ export function useSandboxChat({
       setIsStreaming(false)
       if (isInit && !wasAborted) setInitStatus(prev => prev === 'loading' ? 'error' : prev)
     }
-  }, [sandboxId, onFileUpdate, onSkillsLoaded, onCommandRun, onCommandComplete])
+  }, [sandboxId, conversationId, onFileUpdate, onSkillsLoaded, onCommandRun, onCommandComplete])
 
   const triggerInit = useCallback(() => {
     setInitStatus('loading')
