@@ -163,6 +163,16 @@ export function SandboxView({
     setActiveConversationId(convId)
   }, [sandboxId, activeConversationId])
 
+  const handleRenameConversation = useCallback(async (id: string, title: string) => {
+    const res = await fetch(`/api/sandboxes/${sandboxId}/conversations/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    })
+    if (!res.ok) throw new Error('Failed to rename conversation')
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, title } : c))
+  }, [sandboxId])
+
   // Ref for passing quote handler from wrapper back to editor
   const onQuoteRef = useRef<((q: string) => void) | null>(null)
 
@@ -277,6 +287,7 @@ export function SandboxView({
             conversations={conversations}
             onConversationSelect={handleConversationSelect}
             onNewConversation={handleNewConversation}
+            onRenameConversation={handleRenameConversation}
             onFileUpdate={handleFileUpdate}
             onCommandRun={handleCommandRun}
             onCommandComplete={handleCommandComplete}
@@ -318,6 +329,7 @@ interface SandboxChatWrapperProps {
   conversations: Array<{ id: string; title: string; createdAt: string }>
   onConversationSelect: (id: string) => void
   onNewConversation: () => void
+  onRenameConversation: (id: string, title: string) => Promise<void>
   onFileUpdate: (update: { filename: string; content: string }) => void
   onCommandRun: () => void
   onCommandComplete: () => void
@@ -331,6 +343,7 @@ function SandboxChatWrapper({
   conversations,
   onConversationSelect,
   onNewConversation,
+  onRenameConversation,
   onFileUpdate,
   onCommandRun,
   onCommandComplete,
@@ -429,6 +442,7 @@ function SandboxChatWrapper({
       activeConversationId={conversationId}
       onConversationSelect={onConversationSelect}
       onNewConversation={onNewConversation}
+      onRenameConversation={onRenameConversation}
     />
   )
 }
