@@ -19,7 +19,9 @@ function executeSocratizeTool(
 ): { result: string; fileUpdate?: { filename: string; content: string } } {
   if (name === 'list_files') {
     const all = listFiles(folderPath)
-    const skillFiles = all.filter(f => f.endsWith('-SKILL.md') || f === 'SKILL.md' || f.endsWith('/SKILL.md'))
+    const skillFiles = all.filter(f =>
+      f.endsWith('-SKILL.md') || f === 'SKILL.md' || f.endsWith('/SKILL.md') || f === 'feedback.md'
+    )
     return { result: skillFiles.length > 0 ? skillFiles.join('\n') : '(no skill files yet)' }
   }
   if (name === 'read_file') {

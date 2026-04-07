@@ -45,6 +45,20 @@ describe('buildSocratizeMessages', () => {
   })
 })
 
+describe('feedback.md awareness', () => {
+  it('mentions feedback.md in the system prompt', () => {
+    expect(buildSocratizeSystemPrompt()).toContain('feedback.md')
+  })
+
+  it('mentions [OPEN] status tag', () => {
+    expect(buildSocratizeSystemPrompt()).toContain('[OPEN]')
+  })
+
+  it('mentions description probing after writing', () => {
+    expect(buildSocratizeSystemPrompt()).toContain('should trigger this skill')
+  })
+})
+
 describe('writing voice', () => {
   it('socratize prompt includes active voice rule', () => {
     expect(buildSocratizeSystemPrompt()).toContain('active voice')

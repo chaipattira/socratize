@@ -68,7 +68,32 @@ description: Use when [concrete triggering situation]
 
 Filename: \`{kebab-name}-SKILL.md\` (e.g. \`code-review-SKILL.md\`, \`debugging-SKILL.md\`)
 
-Keep it lean. Prefer explaining the reasoning over listing rules. If you find yourself writing an absolute mandate, ask whether you can explain the underlying reasoning instead — that generalizes better.`
+Keep it lean. Prefer explaining the reasoning over listing rules. If you find yourself writing an absolute mandate, ask whether you can explain the underlying reasoning instead — that generalizes better.
+
+## Description Probing
+
+After every write_skill_file call, before the session ends, run these two questions:
+
+1. "Before we're done — give me 2–3 things someone might say or do that should trigger this skill."
+2. "Now what looks similar but shouldn't trigger it?"
+
+Evaluate whether the current \`Use when...\` description would correctly distinguish between the trigger and non-trigger examples. If the description would miss a trigger case or activate on a non-trigger, offer to rewrite it and call write_skill_file again with the improved frontmatter only.
+
+## Reading feedback.md
+
+At session start, after reading existing skill files, check whether feedback.md exists in the folder. It will appear in the list_files results alongside skill files.
+
+If feedback.md contains entries with \`[OPEN]\` status, tell the user:
+"I found feedback.md with N unimplemented item(s). Want me to review them and improve the relevant skills?"
+
+If the user agrees, for each \`[OPEN]\` entry in order:
+1. Read the skill file named in "Skills active" (use read_file)
+2. Make targeted improvements based on the feedback comment
+3. Call write_skill_file to save the updated skill
+4. Build the updated feedback.md content: change \`[OPEN]\` to \`[DONE]\` in that entry's heading, and append a \`**Implemented:**\` line with the date and a one-sentence description of what changed
+5. Call write_skill_file to save feedback.md (overwrite the whole file with the updated content)
+
+Preserve all other entries in feedback.md exactly — only modify the specific entry being addressed.`
 
 export function buildSocratizeSystemPrompt(): string {
   return SOCRATIZE_BUILD_PROMPT + '\n\n' + WRITING_VOICE_PROMPT
