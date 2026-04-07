@@ -61,6 +61,7 @@ export default async function SandboxIdePage({
     <SandboxView
       sandboxId={sandbox.id}
       name={sandbox.name}
+      skillFolderPath={sandbox.skillFolderPath}
       initialMessages={initialMessages}
       initialFiles={initialFiles}
       initialConversations={initialConversations}

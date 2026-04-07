@@ -140,6 +140,98 @@ function SkillsDropdown({
   )
 }
 
+interface MessageRatingProps {
+  messageId: string
+  messages: SandboxMessage[]
+  messageIndex: number
+  skillFolderPath: string
+  onRate: (messageId: string, rating: 'up' | 'down', comment: string, promptExcerpt: string, responseExcerpt: string) => void
+}
+
+function MessageRating({ messageId, messages, messageIndex, skillFolderPath, onRate }: MessageRatingProps) {
+  const [selected, setSelected] = useState<'up' | 'down' | null>(null)
+  const [comment, setComment] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = () => {
+    if (!selected) return
+    const precedingUser = [...messages].slice(0, messageIndex).reverse().find(m => m.role === 'user')
+    const currentMsg = messages[messageIndex]
+    onRate(
+      messageId,
+      selected,
+      comment,
+      precedingUser?.content.slice(0, 200) ?? '',
+      currentMsg?.content.slice(0, 200) ?? '',
+    )
+    setSubmitted(true)
+  }
+
+  if (submitted) {
+    return (
+      <p className="text-[11px] text-stone-400 mt-1.5 leading-relaxed">
+        Feedback saved —{' '}
+        {skillFolderPath
+          ? <>start a new Interview with <code className="font-mono text-stone-500 bg-linen px-1 rounded text-[10px]">{skillFolderPath}</code> to incorporate the changes</>
+          : 'start a new Interview to incorporate the changes'
+        }
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-1.5 flex items-start gap-1.5">
+      {selected === null ? (
+        <>
+          <button
+            onClick={() => setSelected('up')}
+            className="text-stone-300 hover:text-stone-500 text-xs transition leading-none"
+            title="This was helpful"
+          >
+            👍
+          </button>
+          <button
+            onClick={() => setSelected('down')}
+            className="text-stone-300 hover:text-stone-500 text-xs transition leading-none"
+            title="This could be improved"
+          >
+            👎
+          </button>
+        </>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs leading-none">{selected === 'up' ? '👍' : '👎'}</span>
+            <input
+              autoFocus
+              type="text"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); if (e.key === 'Escape') setSelected(null) }}
+              placeholder="Optional comment..."
+              className="text-xs border border-sepia rounded px-2 py-1 bg-parchment text-stone-700 placeholder-stone-300 focus:outline-none focus:border-stone-400 transition w-44"
+            />
+          </div>
+          <div className="flex items-center gap-2 pl-5">
+            <button
+              onClick={handleSubmit}
+              className="text-xs text-wine hover:text-wine-hover transition"
+            >
+              Submit
+            </button>
+            <button
+              onClick={() => { setSelected(null); setComment('') }}
+              className="text-xs text-stone-300 hover:text-stone-500 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface SandboxChatProps {
   messages: SandboxMessage[]
   streamingText: string
@@ -158,6 +250,8 @@ interface SandboxChatProps {
   onSend: (message: string) => void
   onReInject: () => void
   onStop: () => void
+  onRate: (messageId: string, rating: 'up' | 'down', comment: string, promptExcerpt: string, responseExcerpt: string) => void
+  skillFolderPath: string
   conversations: Array<{ id: string; title: string; createdAt: string }>
   activeConversationId: string
   onConversationSelect: (id: string) => void
@@ -184,6 +278,8 @@ export function SandboxChat({
   onSend,
   onReInject,
   onStop,
+  onRate,
+  skillFolderPath,
   conversations,
   activeConversationId,
   onConversationSelect,
@@ -288,7 +384,7 @@ export function SandboxChat({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {messages.map(msg => (
+        {messages.map((msg, index) => (
           <div key={msg.id} className={`${msg.role === 'user' ? 'flex flex-col items-end' : ''}`}>
             <div className={`text-[10px] uppercase tracking-widest mb-1 ${
               msg.role === 'assistant' ? 'text-wine/50' : 'text-stone-300'
@@ -320,6 +416,17 @@ export function SandboxChat({
                 </div>
               </div>
             </div>
+            {msg.role === 'assistant' && !msg.isInit && !isStreaming && (
+              <div className="max-w-[88%]">
+                <MessageRating
+                  messageId={msg.id}
+                  messages={messages}
+                  messageIndex={index}
+                  skillFolderPath={skillFolderPath}
+                  onRate={onRate}
+                />
+              </div>
+            )}
           </div>
         ))}
 
