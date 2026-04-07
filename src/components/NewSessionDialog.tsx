@@ -15,7 +15,7 @@ const MODELS: Record<string, { label: string; value: string }[]> = {
   ],
 }
 
-type ExtractionMode = 'guided' | 'direct' | 'socratize'
+type ExtractionMode = 'interview' | 'socratize'
 
 interface NewSessionDialogProps {
   onClose: () => void
@@ -26,7 +26,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
   const [title, setTitle] = useState('')
   const [provider, setProvider] = useState('anthropic')
   const [model, setModel] = useState('claude-sonnet-4-6')
-  const [extractionMode, setExtractionMode] = useState<ExtractionMode>('guided')
+  const [extractionMode, setExtractionMode] = useState<ExtractionMode>('interview')
   const [folderPath, setFolderPath] = useState('')
   const [folderFiles, setFolderFiles] = useState<string[]>([])
   const [folderError, setFolderError] = useState<string | null>(null)
@@ -102,9 +102,8 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
   }
 
   const modes: { value: ExtractionMode; label: string; description: string }[] = [
-    { value: 'guided', label: 'Help me discover it', description: 'Questions to surface what I know' },
-    { value: 'direct', label: 'I know what to include', description: 'Walk through the steps myself' },
-    { value: 'socratize', label: 'Build a skill', description: 'Extract and write a skill file' },
+    { value: 'interview', label: 'Interview', description: 'Conversation to surface and document your expertise' },
+    { value: 'socratize', label: 'Build a skill', description: 'Extract and write skill files for your agent' },
   ]
 
   const canSubmit = !!title.trim() && !!folderPath.trim()
@@ -185,7 +184,7 @@ export function NewSessionDialog({ onClose }: NewSessionDialogProps) {
 
           <div>
             <label className="block text-sm font-medium text-stone-600 mb-2">How do you want to start?</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {modes.map(mode => (
                 <button
                   key={mode.value}
