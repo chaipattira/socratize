@@ -17,25 +17,21 @@ model ChatSession {
   model               String                @default("claude-sonnet-4-6")
   extractionMode      String                @default("guided")
   knowledgeFolderPath String                @default("")
-  messages            Message[]
   conversations       SessionConversation[]
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
 }
 
 model Message {
-  id             String               @id @default(cuid())
-  chatSessionId  String?
-  conversationId String?
+  id             String              @id @default(cuid())
+  conversationId String
   role           String // "user" | "assistant"
   content        String
   docOps         String? // JSON string of DocOp[]
   toolHistory    String? // JSON string of intermediate tool call/result messages for KB sessions
-  chatSession    ChatSession?         @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
-  sessionConv    SessionConversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  createdAt      DateTime             @default(now())
+  sessionConv    SessionConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
 
-  @@index([chatSessionId])
   @@index([conversationId])
 }
 
@@ -63,24 +59,20 @@ model Sandbox {
   name                String
   skillFolderPaths    String // JSON array of absolute folder paths
   workspaceFolderPath String
-  messages            SandboxMessage[]
   conversations       SandboxConversation[]
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
 }
 
 model SandboxMessage {
-  id             String               @id @default(cuid())
-  sandboxId      String?
-  conversationId String?
+  id             String              @id @default(cuid())
+  conversationId String
   role           String // "user" | "assistant"
   content        String
   toolHistory    String? // JSON: intermediate tool_use/tool_result MessageParam[] for this exchange
-  createdAt      DateTime             @default(now())
-  sandbox        Sandbox?             @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
-  sandboxConv    SandboxConversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+  sandboxConv    SandboxConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  @@index([sandboxId])
   @@index([conversationId])
 }
 
