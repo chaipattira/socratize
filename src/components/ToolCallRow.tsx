@@ -13,7 +13,7 @@ function CommandScript({ command }: { command: string }) {
 
   if (!isMultiLine) {
     return (
-      <span className="font-mono text-stone-400 bg-vellum border border-sepia px-1.5 py-0.5 rounded text-[11px] truncate max-w-[240px]">
+      <span className="font-mono text-stone-400 bg-vellum border border-sepia px-1.5 py-0.5 rounded text-[11px] break-all whitespace-pre-wrap">
         {command}
       </span>
     )

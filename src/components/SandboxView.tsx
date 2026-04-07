@@ -323,7 +323,7 @@ export function SandboxView({
 
       {/* Bottom: terminal panel */}
       {terminalOpen && (
-        <div style={{ height: terminalHeight }} className="shrink-0 flex flex-col bg-[#1c1917]">
+        <div style={{ height: terminalHeight }} className="shrink-0 flex flex-col bg-[#1c1917] overflow-hidden">
           <div
             onMouseDown={terminalDragHandle}
             className="h-1 shrink-0 bg-stone-700 hover:bg-stone-500 cursor-row-resize transition-colors select-none"
