@@ -10,6 +10,10 @@ export async function PATCH(
   if (!body.title || typeof body.title !== 'string') {
     return NextResponse.json({ error: 'title required' }, { status: 400 })
   }
+  const trimmedTitle = body.title.trim()
+  if (!trimmedTitle) {
+    return NextResponse.json({ error: 'title required' }, { status: 400 })
+  }
 
   const session = await prisma.chatSession.findUnique({ where: { id } })
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -21,7 +25,7 @@ export async function PATCH(
 
   const updated = await prisma.sessionConversation.update({
     where: { id: convId },
-    data: { title: body.title.trim(), updatedAt: new Date() },
+    data: { title: trimmedTitle, updatedAt: new Date() },
     select: { id: true, title: true, createdAt: true },
   })
   return NextResponse.json({ conversation: updated })
