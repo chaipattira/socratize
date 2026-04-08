@@ -17,10 +17,29 @@ const SOCRATIZE_DIR = path.join(os.homedir(), '.socratize')
 const CONFIG_PATH   = path.join(SOCRATIZE_DIR, 'config.json')
 const DB_PATH       = path.join(SOCRATIZE_DIR, 'data.db')
 const SERVER_PATH   = path.join(__dirname, '../dist/server.cjs')
-const PRISMA_BIN    = path.join(__dirname, '../node_modules/.bin/prisma')
+const PRISMA_BIN    = findPrismaBin()
 const SCHEMA_PATH   = path.join(__dirname, '../prisma/schema.prisma')
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+function findPrismaBin() {
+  // Try direct relative path first (local dev / non-hoisted install)
+  const localBin = path.join(__dirname, '../node_modules/.bin/prisma')
+  if (fs.existsSync(localBin)) return localBin
+
+  // When installed via npx, deps may be hoisted — resolve via require
+  try {
+    const pkgJsonPath = require.resolve('prisma/package.json', {
+      paths: [path.join(__dirname, '..'), __dirname],
+    })
+    const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'))
+    const binRel = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin.prisma
+    return path.join(path.dirname(pkgJsonPath), binRel)
+  } catch (_) {}
+
+  return 'prisma' // last resort: hope it's in PATH
+}
+
+
 function checkForUpdate() {
   return new Promise(resolve => {
     const req = https.get(
