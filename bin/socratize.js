@@ -122,6 +122,7 @@ async function main() {
   printInline('Running database migrations ...')
   try {
     execFileSync(PRISMA_BIN, ['migrate', 'deploy', `--schema=${SCHEMA_PATH}`], {
+      cwd: path.join(__dirname, '..'),
       env: process.env,
       stdio: 'pipe',
     })

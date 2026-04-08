@@ -9,7 +9,8 @@
     "dist/",
     ".next/standalone/",
     "prisma/migrations/",
-    "prisma/schema.prisma"
+    "prisma/schema.prisma",
+    "prisma.config.ts"
   ],
   "scripts": {
     "dev": "tsx server.ts",
