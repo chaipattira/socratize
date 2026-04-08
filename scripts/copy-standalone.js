@@ -43,5 +43,17 @@ copyDir(staticSrc, staticDest)
 copyDir(publicSrc, publicDest)
 console.log('Copied .next/static and public/ into .next/standalone/')
 
-removePattern(standaloneDir, name => name.endsWith('.db') || name.startsWith('.env'))
-console.log('Removed *.db and .env* files from .next/standalone/')
+removePattern(standaloneDir, name =>
+  name.endsWith('.db') || name.startsWith('.env') || name === 'package-lock.json'
+)
+console.log('Removed *.db, .env*, and package-lock.json from .next/standalone/')
+
+// Remove output: 'standalone' from the standalone config so the Next.js
+// programmatic API (used by our custom server) works without conflicts.
+const configPath = path.join(standaloneDir, 'next.config.mjs')
+if (fs.existsSync(configPath)) {
+  let config = fs.readFileSync(configPath, 'utf8')
+  config = config.replace(/output:\s*['"]standalone['"],?\s*\n?/g, '')
+  fs.writeFileSync(configPath, config)
+  console.log('Patched next.config.mjs in standalone (removed output: standalone)')
+}
