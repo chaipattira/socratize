@@ -6,6 +6,7 @@ interface SandboxFileTreeProps {
   sandboxId: string
   files: string[]
   activeFilename: string | null
+  extractingFilename: string | null
   onFileClick: (filename: string) => void
   onFilesUploaded: (filenames: string[]) => void
 }
@@ -14,6 +15,7 @@ export function SandboxFileTree({
   sandboxId,
   files,
   activeFilename,
+  extractingFilename,
   onFileClick,
   onFilesUploaded,
 }: SandboxFileTreeProps) {
@@ -61,19 +63,23 @@ export function SandboxFileTree({
           files.map(f => {
             const isBinary = isBinaryFile(f)
             const isActive = f === activeFilename
+            const isExtracting = f === extractingFilename
             return (
               <button
                 key={f}
                 onClick={() => onFileClick(f)}
+                disabled={isExtracting}
                 className={`w-full text-left px-3 py-1.5 text-xs font-mono truncate transition ${
-                  isActive
+                  isExtracting
+                    ? 'text-stone-400 italic animate-pulse cursor-wait'
+                    : isActive
                     ? 'bg-linen text-stone-900'
                     : isBinary
                     ? 'text-stone-300 hover:bg-linen hover:text-stone-400'
                     : 'text-stone-500 hover:bg-linen hover:text-stone-800'
                 }`}
               >
-                {f}
+                {isExtracting ? `${f} (extracting…)` : f}
               </button>
             )
           })

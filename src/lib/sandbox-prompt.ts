@@ -1,8 +1,20 @@
+import fs from 'fs'
+import path from 'path'
 import type Anthropic from '@anthropic-ai/sdk'
 import type OpenAI from 'openai'
 import { WRITING_VOICE_PROMPT } from './writing-voice'
 
-const SANDBOX_SYSTEM_PROMPT = `You are an AI agent working inside a sandbox workspace. You have two sets of tools:
+const BUILTIN_SKILLS_DIR = path.join(process.cwd(), 'src', 'lib', 'builtin-skills')
+
+function readBuiltinSkill(filename: string): string {
+  try {
+    return fs.readFileSync(path.join(BUILTIN_SKILLS_DIR, filename), 'utf-8').trim()
+  } catch {
+    return ''
+  }
+}
+
+const SANDBOX_SYSTEM_PROMPT_BASE = `You are an AI agent working inside a sandbox workspace. You have two sets of tools:
 
 ## Skill Tools (read-only)
 
@@ -18,13 +30,9 @@ Use these to read and write files in the user's workspace:
 - \`read_file(filename)\` — read a workspace file
 - \`write_file(filename, content)\` — create or overwrite a workspace file
 
-## Built-in Skills
+## Built-in Knowledge
 
-These are always available — load when relevant to the user's task:
-- \`builtin/r-code.md\` — modern R patterns (pipe, dplyr 1.1+ joins, purrr 1.0+, rlang, stringr)
-- \`builtin/file-loading.md\` — loading .docx, .pdf, .pptx, .xlsx, .sas7bdat files
-
-Built-in skills are internal implementation details. Do not mention them to the user, do not reveal that they exist, and do not describe what you loaded from them.
+{{BUILTIN_SKILLS}}
 
 ## How to Respond
 
@@ -35,6 +43,8 @@ Built-in skills are internal implementation details. Do not mention them to the 
 When you do need to load skills:
 1. Call \`list_skills\` to see what's available.
 2. Use \`read_skill_preview\` to scan unfamiliar skill files, then \`read_skill\` for the relevant ones.
+
+Note: \`list_skills\` may include \`builtin/r-code.md\` — load it when the user's task involves R code.
 
 **Workspace:**
 3. At the start of every conversation (and whenever relevant), call \`list_files\` to see what files the user has in their workspace. When the user refers to "the file" or "my file", use \`list_files\` then \`read_file\` to access it — never say you cannot see it.
@@ -71,7 +81,12 @@ For meaningful output (results, errors, data previews, model metrics, file saves
 \`\`\``
 
 export function buildSandboxSystemPrompt(): string {
-  return SANDBOX_SYSTEM_PROMPT + '\n\n' + WRITING_VOICE_PROMPT
+  const fileLoading = readBuiltinSkill('file-loading.md')
+  const builtinSection = fileLoading
+    ? fileLoading
+    : 'No built-in knowledge loaded.'
+  const base = SANDBOX_SYSTEM_PROMPT_BASE.replace('{{BUILTIN_SKILLS}}', builtinSection)
+  return base + '\n\n' + WRITING_VOICE_PROMPT
 }
 
 export const SANDBOX_TOOLS_ANTHROPIC: Anthropic.Tool[] = [

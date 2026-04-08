@@ -51,6 +51,7 @@ export function SandboxView({
 
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [isCommandRunning, setIsCommandRunning] = useState(false)
+  const [extractingFile, setExtractingFile] = useState<string | null>(null)
   const [langExtension, setLangExtension] = useState<Extension[]>([])
 
   const [fileTreeWidth, setFileTreeWidth] = useState(192)
@@ -96,6 +97,7 @@ export function SandboxView({
     const companionName = `${filename}.txt`
 
     if (EXTRACTABLE_EXTS.has(ext) && !files.includes(companionName)) {
+      setExtractingFile(filename)
       try {
         const extractRes = await fetch(
           `/api/sandboxes/${sandboxId}/files/${encodeURIComponent(filename)}/extract`,
@@ -106,6 +108,8 @@ export function SandboxView({
         }
       } catch {
         // Silent failure — companion just won't appear
+      } finally {
+        setExtractingFile(null)
       }
     }
 
@@ -246,6 +250,7 @@ export function SandboxView({
             sandboxId={sandboxId}
             files={files}
             activeFilename={activeFile?.filename ?? null}
+            extractingFilename={extractingFile}
             onFileClick={handleFileClick}
             onFilesUploaded={handleFilesUploaded}
           />
