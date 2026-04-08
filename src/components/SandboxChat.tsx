@@ -161,8 +161,8 @@ function MessageRating({ messageId, messages, messageIndex, skillFolderPath, onR
       messageId,
       selected,
       comment,
-      precedingUser?.content.slice(0, 200) ?? '',
-      currentMsg?.content.slice(0, 200) ?? '',
+      precedingUser?.content.slice(0, 500) ?? '',
+      currentMsg?.content.slice(0, 500) ?? '',
     )
     setSubmitted(true)
   }

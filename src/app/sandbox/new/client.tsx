@@ -2,9 +2,24 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+const MODELS: Record<string, { label: string; value: string }[]> = {
+  anthropic: [
+    { label: 'Claude Sonnet 4.6', value: 'claude-sonnet-4-6' },
+    { label: 'Claude Opus 4.6', value: 'claude-opus-4-6' },
+    { label: 'Claude Haiku 4.5', value: 'claude-haiku-4-5-20251001' },
+  ],
+  openai: [
+    { label: 'GPT-4o', value: 'gpt-4o' },
+    { label: 'GPT-4o mini', value: 'gpt-4o-mini' },
+    { label: 'GPT-4 Turbo', value: 'gpt-4-turbo' },
+  ],
+}
+
 export function NewSandboxClient() {
   const router = useRouter()
   const [name, setName] = useState('')
+  const [provider, setProvider] = useState('anthropic')
+  const [model, setModel] = useState('claude-sonnet-4-6')
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -75,6 +90,11 @@ export function NewSandboxClient() {
     }
   }
 
+  const handleProviderChange = (p: string) => {
+    setProvider(p)
+    setModel(MODELS[p][0].value)
+  }
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
@@ -89,6 +109,8 @@ export function NewSandboxClient() {
           name: name.trim(),
           skillFolderPath: skillFolderPath.trim(),
           workspaceFolderPath: workspacePath.trim() || undefined,
+          llmProvider: provider,
+          model,
         }),
       })
       if (!res.ok) {
@@ -137,7 +159,7 @@ export function NewSandboxClient() {
 
           <div>
             <label className="block text-sm font-medium text-stone-600 mb-2">
-              Skills folder <span className="text-stone-400 font-normal">(optional)</span>
+              Skill Deck
             </label>
             <div className="flex gap-2">
               <input
@@ -156,7 +178,7 @@ export function NewSandboxClient() {
                 {isCheckingSkillFolder ? '...' : 'Add'}
               </button>
             </div>
-            <p className="text-xs text-stone-400 mt-1">The folder where your skill files and feedback.md live.</p>
+            <p className="text-xs text-stone-400 mt-1">Equip your agent with skill files.</p>
 
             {skillFolderError && <p className="text-xs text-wine mt-1">{skillFolderError}</p>}
 
@@ -184,7 +206,7 @@ export function NewSandboxClient() {
 
           <div>
             <label className="block text-sm font-medium text-stone-600 mb-2">
-              Workspace folder <span className="text-stone-400 font-normal">(optional — leave blank for a managed workspace)</span>
+              Workspace folder
             </label>
             <div className="flex gap-2">
               <input
@@ -203,8 +225,34 @@ export function NewSandboxClient() {
                 {isCheckingWorkspace ? '...' : 'Add'}
               </button>
             </div>
+            <p className="text-xs text-stone-400 mt-1">Where your agent will work.</p>
             {workspacePathError && <p className="text-xs text-wine mt-1">{workspacePathError}</p>}
             {workspaceVerified && <p className="text-xs text-wine/60 mt-1">✓ Found</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-600 mb-2">LLM Provider</label>
+            <select
+              value={provider}
+              onChange={e => handleProviderChange(e.target.value)}
+              className="w-full bg-parchment border border-sepia rounded px-4 py-2.5 text-sm text-stone-900 focus:outline-none focus:border-stone-400 transition"
+            >
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-600 mb-2">Model</label>
+            <select
+              value={model}
+              onChange={e => setModel(e.target.value)}
+              className="w-full bg-parchment border border-sepia rounded px-4 py-2.5 text-sm text-stone-900 focus:outline-none focus:border-stone-400 transition"
+            >
+              {MODELS[provider].map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
           </div>
 
           {error && (

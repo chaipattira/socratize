@@ -18,8 +18,8 @@ const MODELS: Record<string, { label: string; value: string }[]> = {
 type ExtractionMode = 'interview' | 'socratize'
 
 const modes: { value: ExtractionMode; label: string; description: string }[] = [
-  { value: 'interview', label: 'Interview', description: 'Conversation to surface and document your expertise' },
-  { value: 'socratize', label: 'Build a skill', description: 'Extract and write skill files for your agent' },
+  { value: 'interview', label: 'Socratic Dialogue', description: 'Conversation to surface and document your expertise' },
+  { value: 'socratize', label: 'Skill Crafting', description: 'Extract and write skill files for your agent' },
 ]
 
 export function NewSessionClient() {
@@ -180,7 +180,7 @@ export function NewSessionClient() {
 
           <div>
             <label className="block text-sm font-medium text-stone-600 mb-2">
-              Knowledge base folder path
+              Workspace folder
             </label>
             <div className="flex gap-2">
               <input
