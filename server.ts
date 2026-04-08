@@ -9,9 +9,9 @@ import { prisma } from './src/lib/prisma'
 
 const dev = process.env.NODE_ENV !== 'production'
 const port = parseInt(process.env.PORT ?? '3000', 10)
-// In production the bundled server runs from dist/; standalone is one level up
-const dir = dev ? undefined : path.resolve(__dirname, '../.next/standalone')
-const app = next({ dev, port, ...(dir ? { dir } : {}) })
+// In production the bundled server runs from dist/; package root is one level up
+const dir = dev ? undefined : path.resolve(__dirname, '..')
+const app = next({ dev, dir })
 const handle = app.getRequestHandler()
 
 app.prepare().then(() => {

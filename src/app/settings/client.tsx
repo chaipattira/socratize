@@ -63,7 +63,7 @@ export default function SettingsClient() {
 
         <h2 className="font-display text-4xl font-normal text-stone-900 mb-2">Settings</h2>
         <p className="text-stone-400 text-sm mb-10">
-          Keys are encrypted at rest. Required to start extraction sessions.
+          Keys are encrypted at rest. Required to start sessions.
         </p>
 
         {keys.length > 0 && (
