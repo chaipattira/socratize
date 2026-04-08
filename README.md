@@ -1,78 +1,62 @@
 # Socratize
 
-A webapp that interviews domain experts using Socratic dialogue to extract their tacit knowledge into structured markdown files — ready to be fed into AI agents.
+Tacit knowledge is what makes an expert successful, but it is difficult to articulate such intuition, judgment calls, and the reasoning/thinking that underpins expertise. Socratize extracts them by interviewing you using the principle of Socratic dialogue.
+
+Socratize is available as an npm package. You can install it via:
+
+```bash
+npx socratize
+```
+
+No signup. Everything runs on your machine and makes use of your API key.
+
+---
 
 ## How It Works
 
-1. Add your Anthropic or OpenAI API key in Settings
-2. Create a new session and enter a topic ("Confounding in Epidemiology")
-3. Chat with the AI — it asks probing questions to draw out your knowledge
-4. Watch the markdown document form in real-time on the right pane
-5. Edit the document directly if you want to tweak anything
-6. Download the finished `.md` file
+Since Socratize is a local web app, your sessions, sandboxes, and API keys stay on disk at `~/.socratize/`. If you're using it for the first time, go to Settings and configure your API key.
 
-## Local Setup
+### Socratic Dialogue
 
-### 1. Clone and install
+Create a session, give it a topic, and point it at a folder on your computer. The right pane is a chat with the interviewer. The left pane is the document being built.
 
-```bash
-git clone https://github.com/chaipattira/socratize
-cd socratize
-npm install
-```
+The interviewer doesn't ask you to summarize everything you know. It opens with a question designed to surface tacit knowledge — something specific that makes you think about how you actually work, not how you'd describe it to a student. You answer; it probes; the document updates in real time. If you already have a structure in mind, the interviewer also adapts.
 
-### 2. Set up environment variables
+### Skill Crafting 
 
-Copy the example and fill in the values:
+When the conversation feels complete, Skill Crafting takes the extracted notes and turns them into a properly structured skill file: when to use it, the process, the rules, the common mistakes. If something's missing or unclear, it asks follow-up questions before writing the final document.
 
-```bash
-cp .env.local.example .env.local
-```
+The result is markdown files in your chosen folder that you can load into Sandbox mode to test your skills directly!
 
-`.env.local` needs:
+### Sandbox
+
+Open a sandbox, select the folder you built, and start a conversation with an agent equipped with your skills. Upload files (PDFs, code, datasets) and the Agent can read them, write new files, and run code in a built-in terminal.
+During the conversation, it selects the relevant skills and use them accordingly.
+
+**Skills improve through use:** After each Agent responses, you can choose to click thumbs up or down. A comment field appears; the feedback saves to `feedback.md` in your skills folder. You can subsequently start a new interview pointing at the folder, and tell Socratize to work through each comment with you.
+
+---
+
+## Your Data
 
 ```
-# Encryption key for stored API keys (64 hex chars = 32 bytes)
-# generate with: openssl rand -hex 32
-ENCRYPTION_KEY=
-
-# Database
-DATABASE_URL=file:./prisma/dev.db
+~/.socratize/
+  data.db      — sessions, sandboxes, encrypted API keys
+  config.json  — encryption key (generated on first run)
 ```
 
-### 3. Set up the database
-
-```bash
-npx prisma migrate dev --name init
-```
-
-### 4. Run
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Adding an API Key
-
-Go to **Settings** and add your Anthropic (`sk-ant-...`) or OpenAI (`sk-...`) key. Keys are encrypted with AES-256-GCM before being stored.
-
-## Data Storage
-
-- Session metadata and chat history: `prisma/dev.db` (SQLite)
-- Markdown documents: `data/docs/<session-id>.md` (one file per session)
+---
 
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript
-- Prisma v7 + SQLite
+- Prisma + SQLite
 - CodeMirror (markdown editor)
+- xterm.js + node-pty (terminal)
 - Anthropic SDK + OpenAI SDK
-- Vitest
 
-## Tests
+---
 
-```bash
-npm test
-```
+## License
+
+MIT License. Socratize is built by Chaipat Tirapongprasert as part of the aiX Convergence Design Studio Internship.
