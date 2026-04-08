@@ -84,8 +84,18 @@ function done() { process.stdout.write(' done\n') }
 function fixNodePtyPermissions() {
   // npm tarballs strip the execute bit from prebuilt binaries.
   // node-pty's posix_spawnp will fail unless spawn-helper is executable.
+  // Use require.resolve to find node-pty regardless of npm hoisting.
+  let nodePtyDir
+  try {
+    nodePtyDir = path.dirname(require.resolve('node-pty/package.json', {
+      paths: [path.join(__dirname, '..'), __dirname],
+    }))
+  } catch {
+    // Fallback to relative path
+    nodePtyDir = path.join(__dirname, '..', 'node_modules', 'node-pty')
+  }
   const spawnHelper = path.join(
-    __dirname, '..', 'node_modules', 'node-pty', 'prebuilds',
+    nodePtyDir, 'prebuilds',
     `${process.platform}-${process.arch}`, 'spawn-helper'
   )
   try {

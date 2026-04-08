@@ -32,13 +32,22 @@ app.prepare().then(() => {
     const sandboxId = match[1]
 
     wss.handleUpgrade(req, socket, head, async (ws) => {
+      try {
       const sandbox = await prisma.sandbox.findUnique({ where: { id: sandboxId } })
       if (!sandbox) {
         ws.close(1008, 'Sandbox not found')
         return
       }
 
-      const entry = getOrCreatePty(sandboxId, sandbox.workspaceFolderPath)
+      let entry
+      try {
+        entry = getOrCreatePty(sandboxId, sandbox.workspaceFolderPath)
+      } catch (err) {
+        console.error('[terminal] Failed to spawn PTY:', err)
+        ws.send('\r\n\x1b[31mFailed to start terminal: ' + (err instanceof Error ? err.message : String(err)) + '\x1b[0m\r\n')
+        ws.close(1011, 'PTY spawn failed')
+        return
+      }
 
       // Replay buffered output so the terminal shows what the agent already ran
       if (entry.outputBuffer) {
@@ -63,6 +72,10 @@ app.prepare().then(() => {
       ws.on('error', () => {
         entry.dataListeners = entry.dataListeners.filter(l => l !== dataListener)
       })
+      } catch (err) {
+        console.error('[terminal] WebSocket handler error:', err)
+        try { ws.close(1011, 'Internal error') } catch { /* already closed */ }
+      }
     })
   })
 
