@@ -164,13 +164,14 @@ async function main() {
   const url = `http://localhost:${port}`
 
   // 8. Open browser
+  print(`  Open ${url} in your browser`)
   try {
     const open = require('open')
-    print(`  Open ${url} in your browser`)
+    const subprocess = await open(url)
+    subprocess.on('error', () => {})  // suppress async spawn errors
     print('  (Opening automatically...)')
-    await open(url)
   } catch {
-    print(`  Open ${url} in your browser`)
+    // open package missing or spawn failed synchronously — no-op
   }
 
   print('')
