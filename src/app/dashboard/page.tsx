@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { DashboardClient } from './client'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const keyCount = await prisma.apiKey.count()
   if (keyCount === 0) {
