@@ -20,7 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build",
-    "postinstall": "for f in node_modules/node-pty/prebuilds/*/spawn-helper; do chmod +x \"$f\" 2>/dev/null || true; done"
+    "postinstall": "prisma generate && for f in node_modules/node-pty/prebuilds/*/spawn-helper; do chmod +x \"$f\" 2>/dev/null || true; done"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
