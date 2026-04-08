@@ -80,11 +80,29 @@ function print(msg) { process.stdout.write(msg + '\n') }
 function printInline(msg) { process.stdout.write('  ' + msg) }
 function done() { process.stdout.write(' done\n') }
 
+// ── Helpers (native-module fixups) ──────────────────────────────────────────
+function fixNodePtyPermissions() {
+  // npm tarballs strip the execute bit from prebuilt binaries.
+  // node-pty's posix_spawnp will fail unless spawn-helper is executable.
+  const spawnHelper = path.join(
+    __dirname, '..', 'node_modules', 'node-pty', 'prebuilds',
+    `${process.platform}-${process.arch}`, 'spawn-helper'
+  )
+  try {
+    if (fs.existsSync(spawnHelper)) {
+      fs.chmodSync(spawnHelper, 0o755)
+    }
+  } catch {}
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 async function main() {
   print('')
   print(`  Socratize v${PKG_VERSION}`)
   print('')
+
+  // Fix native module permissions (npm strips execute bit from prebuilts)
+  fixNodePtyPermissions()
 
   // Fire update check immediately — non-blocking
   const updatePromise = checkForUpdate()
@@ -164,14 +182,13 @@ async function main() {
   const url = `http://localhost:${port}`
 
   // 8. Open browser
-  print(`  Open ${url} in your browser`)
   try {
     const open = require('open')
-    const subprocess = await open(url)
-    subprocess.on('error', () => {})  // suppress async spawn errors
+    print(`  Open ${url} in your browser`)
     print('  (Opening automatically...)')
+    await open(url)
   } catch {
-    // open package missing or spawn failed synchronously — no-op
+    print(`  Open ${url} in your browser`)
   }
 
   print('')
