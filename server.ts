@@ -1,6 +1,7 @@
 // server.ts
 import { createServer } from 'http'
 import { parse } from 'url'
+import path from 'path'
 import next from 'next'
 import { WebSocketServer, WebSocket } from 'ws'
 import { getOrCreatePty } from './src/lib/pty-manager'
@@ -8,7 +9,9 @@ import { prisma } from './src/lib/prisma'
 
 const dev = process.env.NODE_ENV !== 'production'
 const port = parseInt(process.env.PORT ?? '3000', 10)
-const app = next({ dev, port })
+// In production the bundled server runs from dist/; standalone is one level up
+const dir = dev ? undefined : path.resolve(__dirname, '../.next/standalone')
+const app = next({ dev, port, ...(dir ? { dir } : {}) })
 const handle = app.getRequestHandler()
 
 app.prepare().then(() => {
