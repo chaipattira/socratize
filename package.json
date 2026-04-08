@@ -10,6 +10,7 @@
     ".next/server/",
     ".next/static/",
     ".next/build/",
+    ".next/node_modules/",
     ".next/*.json",
     ".next/BUILD_ID",
     ".next/package.json",
@@ -21,7 +22,7 @@
   ],
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "next build && esbuild server.ts --bundle --packages=external --platform=node --format=cjs --outfile=dist/server.cjs",
+    "build": "next build && node scripts/fix-externals.js && esbuild server.ts --bundle --packages=external --platform=node --format=cjs --outfile=dist/server.cjs",
     "start": "NODE_ENV=production tsx server.ts",
     "lint": "next lint",
     "test": "vitest run",
