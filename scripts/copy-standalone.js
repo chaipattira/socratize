@@ -25,6 +25,23 @@ function copyDir(src, dest) {
   }
 }
 
+const standaloneDir = path.join(root, '.next', 'standalone')
+
+function removePattern(dir, test) {
+  if (!fs.existsSync(dir)) return
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      removePattern(p, test)
+    } else if (test(entry.name)) {
+      fs.rmSync(p)
+    }
+  }
+}
+
 copyDir(staticSrc, staticDest)
 copyDir(publicSrc, publicDest)
 console.log('Copied .next/static and public/ into .next/standalone/')
+
+removePattern(standaloneDir, name => name.endsWith('.db') || name.startsWith('.env'))
+console.log('Removed *.db and .env* files from .next/standalone/')
