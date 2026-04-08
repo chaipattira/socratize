@@ -1,15 +1,25 @@
 {
   "name": "socratize",
   "version": "0.1.0",
-  "private": true,
+  "bin": {
+    "socratize": "bin/socratize.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    ".next/standalone/",
+    "prisma/migrations/",
+    "prisma/schema.prisma"
+  ],
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "next build",
+    "build": "next build && node scripts/copy-standalone.js && esbuild server.ts --bundle --packages=external --platform=node --format=cjs --outfile=dist/server.cjs",
     "start": "NODE_ENV=production tsx server.ts",
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "chmod +x node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper || true"
+    "prepublishOnly": "npm run build",
+    "postinstall": "for f in node_modules/node-pty/prebuilds/*/spawn-helper; do chmod +x \"$f\" 2>/dev/null || true; done"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
@@ -27,6 +37,7 @@
     "better-sqlite3": "^12.8.0",
     "next": "^16.2.2",
     "node-pty": "^1.1.0",
+    "open": "^8.4.2",
     "openai": "^6.33.0",
     "prisma": "^7.6.0",
     "react": "^18",
@@ -44,6 +55,7 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^6.0.1",
     "dotenv": "^17.4.0",
+    "esbuild": "^0.28.0",
     "jsdom": "^29.0.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
