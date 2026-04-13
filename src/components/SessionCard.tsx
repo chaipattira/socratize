@@ -49,7 +49,7 @@ export function SessionCard({
           Delete
         </button>
       </div>
-      <div className="mt-0.5 flex items-center gap-3 text-xs text-stone-400">
+      <div className="mt-0.5 flex items-center gap-3 text-xs text-stone-500">
         <span>{messageCount} messages</span>
         <span>·</span>
         <span className="capitalize">{llmProvider}</span>

@@ -20,11 +20,11 @@ html, body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #E8DDD0;
+  background: #C4AF96;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #D5C9BA;
+  background: #A8947C;
 }
 
 /* CodeMirror light theme overrides */
@@ -32,22 +32,22 @@ html, body {
   background: #FAF8F4 !important;
 }
 .cm-gutters {
-  background: #F5F1EB !important;
-  border-right: 1px solid #E8DDD0 !important;
-  color: #a8a29e !important;
+  background: #EDE7DD !important;
+  border-right: 1px solid #C4AF96 !important;
+  color: #8B7355 !important;
 }
 .cm-activeLineGutter {
-  background: #EDE7DD !important;
+  background: #D9CABC !important;
 }
 .cm-activeLine {
-  background: rgba(245, 241, 235, 0.6) !important;
+  background: rgba(237, 231, 221, 0.6) !important;
 }
 .cm-cursor {
-  border-left-color: #7C2D35 !important;
+  border-left-color: #8B1A24 !important;
 }
 .cm-selectionBackground,
 .cm-focused .cm-selectionBackground {
-  background: #E4DCD1 !important;
+  background: #C4AF96 !important;
 }
 .cm-content {
   color: #1c1917 !important;

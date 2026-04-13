@@ -43,12 +43,12 @@ export default function SettingsClient() {
     setKeys(prev => prev.filter(k => k.id !== id))
   }
 
-  const inputClass = 'w-full bg-parchment border border-sepia rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-300 focus:outline-none focus:border-stone-400 transition'
+  const inputClass = 'w-full bg-parchment border border-sepia rounded px-4 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:border-stone-500 transition'
 
   return (
     <div className="min-h-screen bg-parchment">
-      <header className="border-b border-sepia px-8 py-4 flex items-center gap-4">
-        <button onClick={() => router.push('/dashboard')} className="text-stone-400 hover:text-stone-700 text-sm transition">
+      <header className="bg-ink px-8 py-4 flex items-center gap-4">
+        <button onClick={() => router.push('/dashboard')} className="text-parchment/50 hover:text-parchment/90 text-sm transition">
           ← Dashboard
         </button>
         <span className="font-display text-xl italic text-wine">Socratize</span>
@@ -62,7 +62,7 @@ export default function SettingsClient() {
         )}
 
         <h2 className="font-display text-4xl font-normal text-stone-900 mb-2">Settings</h2>
-        <p className="text-stone-400 text-sm mb-10">
+        <p className="text-stone-500 text-sm mb-10">
           Keys are encrypted at rest. Required to start sessions.
         </p>
 

@@ -126,7 +126,7 @@ export function ChatPane({
     EditorView.theme({
       '&': { minHeight: '42px', maxHeight: '200px', background: '#FAF8F4' },
       '.cm-scroller': { overflow: 'auto' },
-      '.cm-content': { minHeight: '42px', padding: '10px 14px', color: '#1c1917', caretColor: '#7C2D35' },
+      '.cm-content': { minHeight: '42px', padding: '10px 14px', color: '#1c1917', caretColor: '#8B1A24' },
       '.cm-line': { padding: '0' },
       '.cm-focused': { outline: 'none' },
     }),
@@ -158,7 +158,7 @@ export function ChatPane({
 
   return (
     <div className="flex flex-col h-full bg-parchment">
-      <div className="px-4 py-2 bg-parchment border-b border-sepia text-xs flex items-center justify-between gap-2">
+      <div className="px-4 py-2 bg-vellum border-b border-sepia text-xs flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <button
             onClick={onNewConversation}

@@ -11,12 +11,13 @@ const config: Config = {
       },
       colors: {
         parchment: '#FAF8F4',
-        vellum: '#F5F1EB',
-        linen: '#EDE7DD',
-        sepia: '#E8DDD0',
+        vellum: '#EDE7DD',
+        linen: '#D9CABC',
+        sepia: '#C4AF96',
+        ink: '#1C1208',
         wine: {
-          DEFAULT: '#7C2D35',
-          hover: '#6B2430',
+          DEFAULT: '#8B1A24',
+          hover: '#7A1520',
           light: '#A33D47',
         },
       },

@@ -76,7 +76,7 @@ export function EditorPane({
       )}
 
       <div className="flex flex-col flex-1 min-w-0">
-        <div className="px-4 py-2 bg-parchment border-b border-sepia text-xs text-stone-500 flex justify-between items-center shrink-0">
+        <div className="px-4 py-2 bg-vellum border-b border-sepia text-xs text-stone-600 flex justify-between items-center shrink-0">
           <span className="font-mono truncate">{filename || 'No file selected'}</span>
           <div className="flex items-center gap-3 shrink-0">
             {!showSidebar && <span className="text-wine/60">● Auto-updating</span>}

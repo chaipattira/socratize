@@ -26,11 +26,11 @@ export function DashboardClient({ initialSessions }: DashboardClientProps) {
 
   return (
     <div className="min-h-screen bg-parchment">
-      <header className="border-b border-sepia px-8 py-4 flex justify-between items-center">
+      <header className="bg-ink px-8 py-4 flex justify-between items-center">
         <span className="font-display text-xl italic text-wine tracking-wide">Socratize</span>
         <div className="flex items-center gap-6">
-          <Link href="/sandbox" className="text-sm text-stone-500 hover:text-stone-800 transition">Sandbox</Link>
-          <Link href="/settings" className="text-sm text-stone-500 hover:text-stone-800 transition">Settings</Link>
+          <Link href="/sandbox" className="text-sm text-parchment/50 hover:text-parchment/90 transition">Sandbox</Link>
+          <Link href="/settings" className="text-sm text-parchment/50 hover:text-parchment/90 transition">Settings</Link>
         </div>
       </header>
 
@@ -38,7 +38,7 @@ export function DashboardClient({ initialSessions }: DashboardClientProps) {
         <div className="flex justify-between items-baseline mb-10">
           <div>
             <h1 className="font-display text-4xl font-normal text-stone-900">Interviews</h1>
-            <p className="text-stone-400 text-sm mt-1">Your knowledge extraction interviews</p>
+            <p className="text-stone-500 text-sm mt-1">Your knowledge extraction interviews</p>
           </div>
           <button
             onClick={() => router.push('/sessions/new')}
@@ -50,8 +50,8 @@ export function DashboardClient({ initialSessions }: DashboardClientProps) {
 
         {sessions.length === 0 ? (
           <div className="text-center py-24">
-            <p className="font-display text-2xl text-stone-300 italic">No sessions yet</p>
-            <p className="text-stone-400 text-sm mt-2">Begin extracting your expertise</p>
+            <p className="font-display text-2xl text-stone-400 italic">No sessions yet</p>
+            <p className="text-stone-500 text-sm mt-2">Begin extracting your expertise</p>
           </div>
         ) : (
           <div className="divide-y divide-sepia">
@@ -72,7 +72,7 @@ export function DashboardClient({ initialSessions }: DashboardClientProps) {
         )}
       </main>
 
-      <footer className="text-center pb-8 text-xs text-stone-400">
+      <footer className="text-center pb-8 text-xs text-stone-500">
         Questions? Say hi at{' '}
         <a href="mailto:t.chaipat@columbia.edu" className="underline hover:text-stone-600 transition">
           t.chaipat@columbia.edu

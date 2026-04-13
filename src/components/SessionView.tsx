@@ -153,15 +153,15 @@ export function SessionView({
   return (
     <div className="flex flex-col h-screen bg-parchment">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-3 bg-parchment border-b border-sepia shrink-0">
+      <div className="flex items-center justify-between px-6 py-3 bg-ink shrink-0">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push('/dashboard')}
-            className="text-stone-400 hover:text-stone-700 text-sm transition"
+            className="text-parchment/50 hover:text-parchment/90 text-sm transition"
           >
             ← Dashboard
           </button>
-          <span className="text-sm text-stone-400">{title}</span>
+          <span className="text-sm text-parchment/40">{title}</span>
         </div>
         <span className="font-display text-xl italic text-wine">Socratize</span>
       </div>
