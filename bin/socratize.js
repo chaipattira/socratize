@@ -22,9 +22,14 @@ const SCHEMA_PATH   = path.join(__dirname, '../prisma/schema.prisma')
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function findPrismaBin() {
+  const isWindows = process.platform === 'win32'
+
   // Try direct relative path first (local dev / non-hoisted install)
+  // On Windows, npm creates .cmd wrappers in .bin/ instead of plain scripts
   const localBin = path.join(__dirname, '../node_modules/.bin/prisma')
-  if (fs.existsSync(localBin)) return localBin
+  const localBinCmd = localBin + '.cmd'
+  if (isWindows && fs.existsSync(localBinCmd)) return localBinCmd
+  if (!isWindows && fs.existsSync(localBin)) return localBin
 
   // When installed via npx, deps may be hoisted — resolve via require
   try {
@@ -33,10 +38,20 @@ function findPrismaBin() {
     })
     const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'))
     const binRel = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin.prisma
-    return path.join(path.dirname(pkgJsonPath), binRel)
+    const resolvedBin = path.join(path.dirname(pkgJsonPath), binRel)
+
+    // On Windows, .js files can't be executed directly — look for the .cmd
+    // wrapper that npm generates in node_modules/.bin/ alongside the package
+    if (isWindows) {
+      const binDir = path.join(path.dirname(pkgJsonPath), '../../.bin')
+      const cmdWrapper = path.join(binDir, 'prisma.cmd')
+      if (fs.existsSync(cmdWrapper)) return cmdWrapper
+    }
+
+    return resolvedBin
   } catch (_) {}
 
-  return 'prisma' // last resort: hope it's in PATH
+  return isWindows ? 'prisma.cmd' : 'prisma' // last resort: hope it's in PATH
 }
 
 
@@ -153,6 +168,7 @@ async function main() {
       cwd: path.join(__dirname, '..'),
       env: process.env,
       stdio: 'pipe',
+      shell: process.platform === 'win32',
     })
     done()
   } catch (err) {
