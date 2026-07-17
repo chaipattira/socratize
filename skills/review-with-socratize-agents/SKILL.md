@@ -47,12 +47,11 @@ Dedupe overlapping findings across personas — the same missing prerequisite fl
 
 ## Obvious vs judgment call
 
-APPLY DIRECTLY (obvious): typos, broken links/paths, a missing prerequisite multiple personas
-flagged, a clearly wrong command or unit, a dead reference.
+APPLY DIRECTLY (obvious): typos, broken links or paths, a clearly wrong command or unit, a dead reference.
 
-ASK THE USER (judgment): contested scope, competing rewrites, a design-rationale question,
-anything that changes meaning or that only the author can confirm. One question at a time,
-multiple-choice with a recommendation, via AskUserQuestion.
+ASK THE USER (judgment): contested scope, competing rewrites, a lone "clarity" rewrite, a design-rationale question, a prerequisite or fact only the author can confirm, anything that changes meaning. One question at a time, multiple-choice with a recommendation, via AskUserQuestion.
+
+If a finding is not unambiguously in the APPLY list above, treat it as a judgment call. When in doubt, ask.
 
 ## Step 6: Loop or conclude
 
