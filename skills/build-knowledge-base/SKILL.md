@@ -44,7 +44,7 @@ Flag **type-conflating** pages — one page doing two jobs (e.g. a README that i
 Report missing categories, conflating pages, and a CREATE-ONLY shortlist that factors in papers (e.g. "the method is explained in `paper.tex` but no how-to reproduces Figure 3").
 
 <HARD-RULE>
-Create new documents only. NEVER move, rename, delete, or rewrite existing files —
+Create new documents only. NEVER move, rename, delete, edit, append to, or rewrite existing files —
 not even to "fix" a conflating page. Report conflation and propose a new page instead.
 </HARD-RULE>
 
@@ -54,7 +54,7 @@ Present the shortlist; the user picks one gap — or names something else.
 
 ## Step 5: Classify the new doc and load its reference
 
-Determine the target type via the compass, then read its guide `references/{tutorials|how-to-guides|reference|explanation}.md` and template `templates/{tutorial|how-to|explanation|reference}.md`.
+Determine the target type via the compass, then read its guide `references/{tutorials,how-to-guides,reference,explanation}.md` and template `templates/{tutorial,how-to,explanation,reference}.md`. See `references/science-education-examples.md` for a worked micro-example of the target type.
 
 ## Step 6: Socratic Q&A
 
@@ -64,7 +64,8 @@ Interview the author to fill the template's unknowns — but only what you truly
 
 Before asking the author anything, try to answer it from the code, existing docs, and
 papers. Only surface genuine unknowns — design rationale, valid input ranges, assumptions
-and limits, prerequisites, expected outputs, known gotchas. Ask ONE question at a time,
+and limits, prerequisites, expected outputs, known gotchas. If you cannot ground an answer
+in an artifact, it is an unknown — ask, never guess. Ask ONE question at a time,
 multiple-choice with a recommended option, via AskUserQuestion.
 
 ## Step 7: Draft
