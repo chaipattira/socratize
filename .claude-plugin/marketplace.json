@@ -1,0 +1,11 @@
+{
+  "name": "socratize",
+  "owner": { "name": "chaipat" },
+  "plugins": [
+    {
+      "name": "socratize",
+      "source": "./",
+      "description": "Diataxis knowledge-base authoring + persona-panel review for research codebases."
+    }
+  ]
+}
