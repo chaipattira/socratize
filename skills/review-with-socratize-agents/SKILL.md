@@ -15,6 +15,8 @@ The path arrives either from a `build-knowledge-base` handoff or from a direct i
 
 Load the bundled `personas/*.md` (5 presets) PLUS any `.claude/personas/*.md` in the TARGET repo. A repo persona whose `name` matches a bundled one OVERRIDES the preset (repo wins). Print the active set by name. The user may restrict to a named subset — honor it. Safety cap: 20 personas; if more resolve, keep the first 20 alphabetically and name the ones dropped.
 
+Each persona needs frontmatter `role` + `evaluation_criteria` and a `## Mission` — see `persona-format.md`. If a per-repo persona lacks these, fall back to its first line as the role and its whole body as the `<persona-criteria>` block rather than injecting blank fields.
+
 ## Step 3: Dispatch in parallel
 
 Dispatch ONE agent per active persona, ALL in a single message so they run concurrently — never fold them into one combined review. Each agent is `general-purpose` with tools `Read, Grep, Glob` so it grounds its review in the actual codebase, not just the doc's prose.

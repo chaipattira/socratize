@@ -22,3 +22,4 @@ for their codebase, then review it with a persona panel.
 
 Drop `*.md` files in your repo's `.claude/personas/` to add domain reviewers (e.g. a
 physicist, a statistician, an assessment designer). The panel merges them with the bundled set.
+See `skills/review-with-socratize-agents/persona-format.md` for the required fields.
