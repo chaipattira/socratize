@@ -5,7 +5,7 @@
     {
       "name": "socratize",
       "source": "./",
-      "description": "Diataxis knowledge-base authoring + persona-panel review for research codebases."
+      "description": "Diataxis knowledge-base authoring + persona-panel review + skill distillation for research codebases."
     }
   ]
 }

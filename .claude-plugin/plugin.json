@@ -1,7 +1,7 @@
 {
   "name": "socratize",
   "version": "0.1.0",
-  "description": "Build a Diataxis knowledge base for research codebases, then review it with a science/education persona panel.",
+  "description": "Build a Diataxis knowledge base for research codebases, review it with a science/education persona panel, then distill the docs into a distributable skill.",
   "author": { "name": "chaipat" },
-  "keywords": ["documentation", "diataxis", "knowledge-base", "science", "research", "education", "review", "personas"]
+  "keywords": ["documentation", "diataxis", "knowledge-base", "science", "research", "education", "review", "personas", "skill"]
 }

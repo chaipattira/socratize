@@ -10,6 +10,10 @@ for their codebase, then review it with a persona panel.
 - **review-with-socratize-agents** — fans out reviewer personas (reproducibility, domain
   accuracy, instructional clarity, newcomer, sustainability) in parallel; each writes a
   structured report; obvious fixes are applied and judgment calls are brought back to you.
+- **distill-skill** — turns your existing docs into a distributable Claude Code skill. It
+  suggests what to convert, maps each Diátaxis type into a skill (how-to → steps, reference →
+  bundled lookup, explanation → background), and verifies the result with a subagent that
+  actually uses the skill before you ship it. Runs standalone; writes to `.claude/skills/<name>/`.
 
 ## Install
 

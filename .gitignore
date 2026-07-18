@@ -4,3 +4,7 @@
 # OS / editor cruft
 .DS_Store
 *.swp
+
+# Python bytecode (e.g. from running fixture code during skill validation)
+__pycache__/
+*.pyc

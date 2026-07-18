@@ -1,0 +1,23 @@
+---
+name: <verb-first-kebab-name>
+description: Use when <triggers and symptoms only — NO workflow summary>
+---
+
+# <Skill Title>
+
+## Overview
+<One or two sentences: what this does and the core principle.>
+
+## When to use
+<Symptoms and situations that should trigger this skill. When NOT to use.>
+
+## Steps
+1. <imperative, verifiable step distilled from the how-to>
+2. <…>
+
+## Reference
+<Link bundled references/*.md for lookup; keep this SKILL.md lean.>
+
+## Common mistakes
+<Observed agent failures from RED/verify and their fixes. Omit this section if none were observed —
+do not backfill from the docs.>
