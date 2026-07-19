@@ -33,8 +33,29 @@ frontmatter `evaluation_criteria` (wrapped in `<persona-criteria>`), plus the co
 `report-format.md`. The `## Evaluation Criteria` prose is guidance for whoever edits the persona; it
 is not injected.
 
+## Naming convention (the cast)
+
+The bundled presets are a named cast. Each `role` leads with a first name and archetype —
+`"Nova, the newcomer — a first-week graduate student reading this cold"` — and each `## Mission`
+opens with two or three sentences of personality before naming the lens boundaries. This is a
+convention, not a requirement: the character rides inside the already-injected `role` and
+`## Mission`, so no extra frontmatter is needed. The `role` line doubles as the roster entry the
+panel prints when it asks who should review.
+
 ## Fallback for loosely-structured files
 
 If a per-repo persona is missing `role`, `## Mission`, or `evaluation_criteria`, do NOT inject blanks.
 Use the file's first heading (or first non-empty line) as the role and its entire body as the
 `<persona-criteria>` block, so even a freeform persona still yields a usable lens.
+
+## Authoring a custom persona
+
+When a user describes a reviewer or a target audience, write a persona in this format:
+
+- Choose a `name:` (kebab id) and a character for `role:` — name + archetype + one-line identity.
+- Open `## Mission` with the character's personality, then state the lens boundaries. Name what
+  the persona does NOT judge, deferring to a named sibling, so it stays orthogonal to the cast.
+- Give three to five `evaluation_criteria`, each a testable statement.
+
+Use it for the current review, then offer to save it to the target repo's
+`.claude/personas/<id>.md` for reuse.
