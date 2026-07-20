@@ -1,6 +1,6 @@
 # Persona File Format
 
-Reviewer personas are loaded by `review-with-socratize-agents` from two places:
+Reviewer personas are loaded by `socratize-me` from two places:
 - **Bundled presets:** `personas/*.md` in this skill (the starter catalog).
 - **Per-repo personas:** `.claude/personas/*.md` in the repo being reviewed. A repo persona whose `name` matches a bundled one overrides it.
 

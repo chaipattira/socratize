@@ -1,5 +1,5 @@
 ---
-name: review-with-socratize-agents
+name: socratize-me
 description: Use when a documentation page or knowledge-base doc needs multi-perspective review — reproducibility, scientific accuracy, teaching clarity, newcomer legibility, maintainability. Triggers after build-knowledge-base, or standalone on "review these docs", "get feedback on this doc", "persona review".
 ---
 
@@ -13,7 +13,7 @@ The path arrives either from a `build-knowledge-base` handoff or from a direct i
 
 ## Step 2: Load personas and pick the panel
 
-Load the bundled `personas/*.md` — an eight-member named cast: Nova (newcomer), Dana
+Load the bundled `personas/*.md`: Nova (newcomer), Dana
 (domain-scientist), Remy (reproducibility-reviewer), Tess (instructional-clarity), Sam
 (software-sustainability), Reviewer 2 (peer-reviewer), Cam (cross-disciplinary), and Elena
 (educator) — PLUS any `.claude/personas/*.md` in the TARGET repo. A repo persona whose `name`

@@ -84,4 +84,4 @@ Present the file. On requested changes, apply them and RE-RUN Step 8. Proceed on
 
 Once approved, offer the persona review using this exact wording:
 
-> The knowledge-base page is approved. The recommended next step is a persona review. Shall I launch **review-with-socratize-agents** on <absolute path to the new doc>?
+> The knowledge-base page is approved. The recommended next step is a persona review. Shall I launch **socratize-me** on <absolute path to the new doc>?
