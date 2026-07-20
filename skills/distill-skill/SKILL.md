@@ -27,7 +27,7 @@ Glob widely, then read: prose (`README*`, `docs/`, `*.md/.rst/.adoc/.txt`), note
 cells, a light docstring scan. Papers (`*.tex`, `*.pdf`) are explanation-context only.
 
 ## Step 2 — Classify and map to candidates
-Diátaxis-classify each doc, then group docs by the *capability* an agent would perform (not one per
+Classify each doc using Diátaxis principles, then group docs by the *capability* an agent would perform (not one per
 file). Present a suggestion table:
 
 | Candidate skill | What an agent could DO | Source docs | Diátaxis roles |
