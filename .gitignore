@@ -8,3 +8,7 @@
 # Python bytecode (e.g. from running fixture code during skill validation)
 __pycache__/
 *.pyc
+.gstack/
+paper
+docs
+.claude
