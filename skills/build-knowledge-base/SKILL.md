@@ -7,6 +7,8 @@ description: Use when a scientist or educator wants to document a research codeb
 
 Classify a research codebase's existing docs by Diátaxis, then CREATE the missing ones — drawing domain knowledge out of the author through targeted Socratic questioning.
 
+For a top-down architecture walkthrough (overview → component map → per-component deep-dive) instead of Diátaxis categories, use `model-codebase` instead.
+
 ## The Diátaxis foundation
 
 Two compass questions place any content: is the reader **acting** or **cognizing**, and **acquiring** skill or **applying** it?
